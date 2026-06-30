@@ -38,7 +38,7 @@ export function GameCodeForm({ error }: { error?: string }) {
         <div className="relative">
           <input
             className="w-full neo-input p-5 text-center font-headline-md text-headline-md uppercase tracking-widest placeholder:text-outline-variant placeholder:font-body-md"
-            maxLength={6}
+            maxLength={10}
             name="code"
             placeholder="MASUKKAN KODE GAME"
             type="text"
