@@ -106,12 +106,14 @@ export async function createQuiz(formData: FormData) {
   const category = await getOrCreateCategory(supabase, categoryName);
   if ("error" in category) fail(category.error);
 
+  const categoryId = (category as { id: string }).id;
+
   const { data: quiz, error: quizErr } = await supabase
     .from("quizzes")
     .insert({
       title,
       description: description || null,
-      category_id: category.id,
+      category_id: categoryId,
       cover_image: coverImage || null,
       created_by: user.id,
     })
@@ -120,7 +122,7 @@ export async function createQuiz(formData: FormData) {
 
   if (quizErr || !quiz) fail(quizErr?.message ?? "Gagal menyimpan kuis.");
 
-  const inserted = await insertQuestions(supabase, quiz.id, questions, 0);
+  const inserted = await insertQuestions(supabase, quiz!.id, questions, 0);
   if ("error" in inserted) fail(inserted.error);
 
   revalidatePath("/library");
