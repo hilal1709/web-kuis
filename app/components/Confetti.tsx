@@ -13,7 +13,8 @@ export function Confetti() {
 
     function burst() {
       if (!wrapper) return;
-      for (let i = 0; i < 50; i++) {
+      // Reduce particles from 50 to 30 for better performance
+      for (let i = 0; i < 30; i++) {
         const c = document.createElement("div");
         const color = COLORS[Math.floor(Math.random() * COLORS.length)];
         const isCircle = Math.random() > 0.5;
@@ -37,7 +38,8 @@ export function Confetti() {
     }
 
     burst();
-    const interval = setInterval(burst, 5000);
+    // Increase interval from 5000ms to 8000ms to reduce frequency
+    const interval = setInterval(burst, 8000);
     return () => clearInterval(interval);
   }, []);
 

@@ -44,6 +44,7 @@ create table public.quizzes (
   category_id  uuid references public.categories (id) on delete set null,
   cover_image  text,
   plays_count  integer not null default 0,
+  is_public    boolean not null default false,
   created_by   uuid references public.profiles (id) on delete set null,
   created_at   timestamptz not null default now()
 );

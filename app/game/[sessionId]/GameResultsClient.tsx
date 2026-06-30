@@ -6,6 +6,7 @@ import { MaterialIcon } from "@/app/components/MaterialIcon";
 type Session = {
   id: string;
   status: string;
+  owner_id: string;
   quizzes: {
     title: string;
     categories: {
@@ -43,6 +44,7 @@ export function GameResultsClient({
   const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
   const currentPlayer = sortedPlayers.find((p) => p.user_id === currentUserId);
   const currentRank = sortedPlayers.findIndex((p) => p.user_id === currentUserId) + 1;
+  const isOwner = session.owner_id === currentUserId;
 
   return (
     <div className="bg-background text-on-background font-body-md min-h-screen flex flex-col">
@@ -70,7 +72,7 @@ export function GameResultsClient({
       <main className="flex-grow flex flex-col items-center justify-center p-margin md:p-gutter max-w-container-max mx-auto w-full">
         <div className="w-full max-w-2xl">
           {/* Your Result */}
-          {currentPlayer && (
+          {currentPlayer ? (
             <div className="bg-primary-container border-4 border-on-background neo-shadow-md p-8 mb-8 text-center">
               <MaterialIcon name="emoji_events" filled className="text-[64px] mb-4" />
               <h1 className="font-headline-xl text-headline-lg-mobile md:text-headline-xl mb-2">
@@ -99,7 +101,18 @@ export function GameResultsClient({
                 </div>
               </div>
             </div>
-          )}
+          ) : isOwner ? (
+            // If owner didn't play, show this instead
+            <div className="bg-tertiary-container border-4 border-on-background neo-shadow-md p-8 mb-8 text-center">
+              <MaterialIcon name="emoji_events" filled className="text-[64px] mb-4" />
+              <h1 className="font-headline-xl text-headline-lg-mobile md:text-headline-xl mb-2">
+                Game Selesai!
+              </h1>
+              <p className="font-headline-md text-headline-md mb-4">
+                Terima kasih telah menjadi host!
+              </p>
+            </div>
+          ) : null}
 
           {/* Leaderboard */}
           <div className="bg-surface border-4 border-on-background neo-shadow-md p-6">

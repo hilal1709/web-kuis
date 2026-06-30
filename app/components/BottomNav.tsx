@@ -1,13 +1,15 @@
+"use client";
+
 import Link from "next/link";
 import { MaterialIcon } from "./MaterialIcon";
+import { signOut } from "@/app/auth/actions";
 
-type Active = "home" | "search" | "activity" | "profile";
+type Active = "home" | "explore" | "library";
 
 const items: { key: Active; label: string; icon: string; href: string }[] = [
   { key: "home", label: "Home", icon: "home", href: "/" },
-  { key: "search", label: "Search", icon: "search", href: "/library" },
-  { key: "activity", label: "Activity", icon: "leaderboard", href: "/results" },
-  { key: "profile", label: "Profile", icon: "person", href: "/library" },
+  { key: "explore", label: "Explore", icon: "explore", href: "/explore" },
+  { key: "library", label: "Library", icon: "library_books", href: "/library" },
 ];
 
 export function BottomNav({ active = "home" }: { active?: Active }) {
@@ -32,6 +34,17 @@ export function BottomNav({ active = "home" }: { active?: Active }) {
           </Link>
         );
       })}
+      <form action={signOut}>
+        <button
+          type="submit"
+          className="flex flex-col items-center justify-center text-on-surface-variant hover:text-error transition-colors"
+        >
+          <MaterialIcon name="logout" />
+          <span className="font-label-bold text-[10px] uppercase">
+            Keluar
+          </span>
+        </button>
+      </form>
     </nav>
   );
 }

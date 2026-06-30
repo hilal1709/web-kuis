@@ -57,8 +57,8 @@ export function GameCodeForm({ error }: { error?: string }) {
       </form>
       <div className="mt-4 text-on-surface-variant font-label-bold">
         ATAU{" "}
-        <Link className="text-primary hover:underline" href="/library">
-          PILIH KUIS DARI LIBRARY
+        <Link className="text-primary hover:underline" href="/explore">
+          JELAJAHI ASSESSMENT
         </Link>
       </div>
     </div>

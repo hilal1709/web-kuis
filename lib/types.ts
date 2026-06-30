@@ -23,6 +23,7 @@ export type Quiz = {
   plays_count: number;
   created_by: string | null;
   created_at: string;
+  is_public: boolean;
   categories?: Category | null;
 };
 
@@ -54,4 +55,37 @@ export type Attempt = {
   time_taken: number;
   created_at: string;
   profiles?: Profile | null;
+};
+
+export type GameSession = {
+  id: string;
+  quiz_id: string;
+  owner_id: string;
+  status: string;
+  current_question: number;
+  created_at: string;
+  started_at: string | null;
+  ended_at: string | null;
+  min_players: number;
+  quizzes?: Quiz | null;
+};
+
+export type GamePlayer = {
+  id: string;
+  game_session_id: string;
+  user_id: string;
+  score: number;
+  correct_count: number;
+  joined_at: string;
+  plays_incremented: boolean;
+  profiles?: Profile | null;
+};
+
+export type GameAnswer = {
+  id: string;
+  game_player_id: string;
+  question_id: string;
+  option_id: string;
+  is_correct: boolean;
+  answered_at: string;
 };

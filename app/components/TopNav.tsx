@@ -3,12 +3,12 @@ import { getCurrentUser } from "@/lib/supabase/user";
 import { signOut } from "@/app/auth/actions";
 import { MaterialIcon } from "./MaterialIcon";
 
-type ActiveLink = "explore" | "library" | "reports";
+type ActiveLink = "home" | "explore" | "library";
 
 const links: { key: ActiveLink; label: string; href: string }[] = [
-  { key: "explore", label: "Explore", href: "/" },
+  { key: "home", label: "Home", href: "/" },
+  { key: "explore", label: "Explore", href: "/explore" },
   { key: "library", label: "My Library", href: "/library" },
-  { key: "reports", label: "Reports", href: "/results" },
 ];
 
 export async function TopNav({ active }: { active?: ActiveLink }) {

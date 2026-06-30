@@ -93,6 +93,7 @@ export async function createQuiz(formData: FormData) {
   const description = String(formData.get("description") ?? "").trim();
   const categoryName = String(formData.get("category") ?? "").trim();
   const coverImage = String(formData.get("cover_image") ?? "").trim();
+  const isPublic = formData.get("is_public") === "on";
   const questions = parseQuestionsFromFormData(formData);
 
   const fail = (msg: string) =>
@@ -116,6 +117,7 @@ export async function createQuiz(formData: FormData) {
       category_id: categoryId,
       cover_image: coverImage || null,
       created_by: user.id,
+      is_public: isPublic,
     })
     .select("id")
     .single();
@@ -185,4 +187,53 @@ export async function addQuestions(formData: FormData) {
   redirect(
     `/library/${quizId}/edit?added=${questions.length}`,
   );
+}
+
+export async function updateQuiz(formData: FormData) {
+  const quizId = String(formData.get("quiz_id") ?? "");
+  const isPublic = formData.get("is_public") === "on";
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect("/login?redirect=/library");
+
+  const quiz = await assertQuizOwner(supabase, quizId, user.id);
+  if (!quiz) redirect("/library?error=Kuis tidak ditemukan atau bukan milik kamu.");
+
+  const { error } = await supabase.from("quizzes").update({ is_public: isPublic }).eq("id", quizId);
+
+  if (error) {
+    redirect(`/library/${quizId}/edit?error=${encodeURIComponent(error.message ?? "Gagal memperbarui kuis.")}`);
+  }
+
+  revalidatePath("/library");
+  revalidatePath("/");
+  redirect(`/library/${quizId}/edit`);
+}
+
+export async function deleteQuiz(quizId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) redirect("/login?redirect=/library");
+
+  // Check if user is owner
+  const quiz = await assertQuizOwner(supabase, quizId, user.id);
+  if (!quiz) redirect("/library?error=Kuis tidak ditemukan atau bukan milik kamu.");
+
+  // Delete quiz (cascade will delete questions and options)
+  const { error } = await supabase.from("quizzes").delete().eq("id", quizId);
+
+  if (error) {
+    redirect(`/library?error=${encodeURIComponent(error.message ?? "Gagal menghapus kuis.")}`);
+  }
+
+  revalidatePath("/library");
+  revalidatePath("/");
+  redirect("/library?deleted=1");
 }

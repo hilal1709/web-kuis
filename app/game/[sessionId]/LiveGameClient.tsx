@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MaterialIcon } from "@/app/components/MaterialIcon";
 import { createClient } from "@/lib/supabase/client";
-import { submitAnswer } from "../actions";
+import { submitAnswer, endGameSession } from "../actions";
 import type { Question } from "@/lib/types";
 
 const LETTERS = ["A", "B", "C", "D"];
@@ -45,6 +45,13 @@ type Player = {
   };
 };
 
+type GameAnswer = {
+  id: string;
+  game_player_id: string;
+  question_id: string;
+  is_correct: boolean;
+};
+
 interface LiveGameClientProps {
   sessionId: string;
   session: Session;
@@ -70,30 +77,71 @@ export function LiveGameClient({
   const [locked, setLocked] = useState(false);
   const [timeLeft, setTimeLeft] = useState(questions[index]?.time_limit || 20);
   const [elapsed, setElapsed] = useState(0);
+  const [answeredPlayers, setAnsweredPlayers] = useState<Set<string>>(new Set());
+  const [isEndingGame, setIsEndingGame] = useState(false);
   const supabase = createClient();
 
   const isOwner = sessionData.owner_id === currentUserId;
   const current = questions[index];
 
+  // Fetch all players (with profiles) when there are changes
+  const fetchPlayers = async () => {
+    const { data } = await supabase
+      .from("game_players")
+      .select("*, profiles(*)")
+      .eq("game_session_id", sessionId)
+      .order("score", { ascending: false });
+    if (data) {
+      setPlayers(data as Player[]);
+    }
+  };
+
+  // Fetch answers for current question
+  const fetchAnswers = async (questionId: string) => {
+    const { data } = await supabase
+      .from("game_answers")
+      .select("game_player_id, question_id")
+      .eq("question_id", questionId);
+    if (data) {
+      setAnsweredPlayers(new Set(data.map((a) => a.game_player_id)));
+    } else {
+      setAnsweredPlayers(new Set());
+    }
+  };
+
+  // Handle ending game manually
+  const handleEndGame = async () => {
+    if (!isOwner || isEndingGame) return;
+    setIsEndingGame(true);
+    const res = await endGameSession(sessionId);
+    if (res.ok) {
+      router.push(`/game/${sessionId}/results`);
+    } else {
+      alert(res.error);
+      setIsEndingGame(false);
+    }
+  };
+
   // Subscribe to real-time updates
   useEffect(() => {
-    // Subscribe to player score updates
+    // Fetch answers when question changes
+    if (current?.id) {
+      fetchAnswers(current.id);
+    }
+
+    // Subscribe to player updates
     const playersChannel = supabase
       .channel(`game_players:${sessionId}`)
       .on(
         "postgres_changes",
         {
-          event: "UPDATE",
+          event: "*",
           schema: "public",
           table: "game_players",
           filter: `game_session_id=eq.${sessionId}`,
         },
-        (payload) => {
-          setPlayers((prev) =>
-            prev.map((p) =>
-              p.id === payload.new.id ? { ...p, ...payload.new } : p
-            )
-          );
+        () => {
+          fetchPlayers();
         }
       )
       .subscribe();
@@ -111,11 +159,40 @@ export function LiveGameClient({
         },
         (payload) => {
           setSessionData((prev) => ({ ...prev, ...payload.new }));
+          // If game is completed, redirect to results
+          if (payload.new.status === "completed") {
+            router.push(`/game/${sessionId}/results`);
+            return;
+          }
           if (payload.new.current_question !== index) {
-            setIndex(payload.new.current_question);
+            const newIndex = payload.new.current_question;
+            setIndex(newIndex);
             setSelectedId(null);
             setLocked(false);
-            setTimeLeft(questions[payload.new.current_question]?.time_limit || 20);
+            setTimeLeft(questions[newIndex]?.time_limit || 20);
+            // Fetch answers for new question
+            if (questions[newIndex]?.id) {
+              fetchAnswers(questions[newIndex].id);
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    // Subscribe to answers updates
+    const answersChannel = supabase
+      .channel(`game_answers:${sessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "game_answers",
+        },
+        (payload) => {
+          // Only update if answer is for current question
+          if (payload.new.question_id === current?.id) {
+            setAnsweredPlayers((prev) => new Set([...prev, payload.new.game_player_id]));
           }
         }
       )
@@ -124,8 +201,9 @@ export function LiveGameClient({
     return () => {
       playersChannel.unsubscribe();
       sessionChannel.unsubscribe();
+      answersChannel.unsubscribe();
     };
-  }, [sessionId, index, questions, supabase]);
+  }, [sessionId, index, questions, current?.id, supabase]);
 
   // Timer
   useEffect(() => {
@@ -304,44 +382,74 @@ export function LiveGameClient({
             Peringkat Real-time
           </h2>
 
+          {isOwner && (
+            <div className="mb-4 p-3 bg-tertiary-container border-2 border-on-background">
+              <p className="font-label-bold text-label-bold">
+                {answeredPlayers.size} dari {players.length} pemain sudah menjawab
+              </p>
+            </div>
+          )}
+
           <div className="space-y-2">
             {players
               .sort((a, b) => b.score - a.score)
-              .map((player, rank) => (
-                <div
-                  key={player.id}
-                  className={`flex items-center gap-3 p-3 border-2 border-on-background ${
-                    player.user_id === currentUserId
-                      ? "bg-primary-container"
-                      : "bg-surface-container"
-                  }`}
-                >
-                  <div className="w-8 h-8 flex items-center justify-center bg-on-background text-surface font-headline-sm text-headline-sm rounded-full">
-                    {rank + 1}
+              .map((player, rank) => {
+                const hasAnswered = answeredPlayers.has(player.id);
+                return (
+                  <div
+                    key={player.id}
+                    className={`flex items-center gap-3 p-3 border-2 border-on-background ${
+                      player.user_id === currentUserId
+                        ? "bg-primary-container"
+                        : "bg-surface-container"
+                    }`}
+                  >
+                    <div className="w-8 h-8 flex items-center justify-center bg-on-background text-surface font-headline-sm text-headline-sm rounded-full">
+                      {rank + 1}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-body-md text-body-md font-bold truncate">
+                        {player.profiles.username}
+                      </p>
+                      <p className="font-label-bold text-label-bold text-outline">
+                        {player.score} pts
+                      </p>
+                    </div>
+                    {isOwner && (
+                      <div
+                        className={`w-6 h-6 rounded-full flex items-center justify-center border-2 border-on-background ${
+                          hasAnswered ? "bg-green-500 text-white" : "bg-gray-300"
+                        }`}
+                      >
+                        {hasAnswered && (
+                          <MaterialIcon name="check" className="text-[14px]" filled />
+                        )}
+                      </div>
+                    )}
+                    {player.user_id === sessionData.owner_id && (
+                      <MaterialIcon name="crown" className="text-[16px] text-tertiary-fixed" />
+                    )}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-body-md text-body-md font-bold truncate">
-                      {player.profiles.username}
-                    </p>
-                    <p className="font-label-bold text-label-bold text-outline">
-                      {player.score} pts
-                    </p>
-                  </div>
-                  {player.user_id === sessionData.owner_id && (
-                    <MaterialIcon name="crown" className="text-[16px] text-tertiary-fixed" />
-                  )}
-                </div>
-              ))}
+                );
+              })}
           </div>
 
           {/* Owner Controls */}
           {isOwner && (
-            <div className="mt-6 pt-4 border-t-4 border-on-background">
+            <div className="mt-6 pt-4 border-t-4 border-on-background space-y-3">
               <button
                 onClick={advanceQuestion}
-                className="w-full neo-button-primary px-4 py-3 font-label-bold text-label-bold"
+                disabled={locked}
+                className="w-full neo-button-primary px-4 py-3 font-label-bold text-label-bold disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {index + 1 < questions.length ? "PERTANYAAN SELANJUTNYA" : "SELESAI GAME"}
+              </button>
+              <button
+                onClick={handleEndGame}
+                disabled={isEndingGame}
+                className="w-full bg-error text-on-error border-4 border-on-background px-4 py-3 font-label-bold text-label-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all active:translate-x-0 active:translate-y-0 active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isEndingGame ? "MENGHENTIKAN..." : "AKHIRI GAME SEKARANG"}
               </button>
             </div>
           )}

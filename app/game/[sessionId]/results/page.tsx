@@ -27,6 +27,14 @@ export default async function GameResultsPage({
 
   const { session, players } = gameData;
 
+  // Jika sesi belum selesai, redirect ke halaman sesuai status
+  if (session.status === "waiting") {
+    redirect(`/game/${sessionId}`);
+  }
+  if (session.status === "active") {
+    redirect(`/game/${sessionId}/play`);
+  }
+
   return (
     <GameResultsClient
       sessionId={sessionId}

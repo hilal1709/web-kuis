@@ -53,6 +53,18 @@ export function WaitingRoomClient({
   const [starting, setStarting] = useState(false);
   const supabase = createClient();
 
+  // Function to fetch all players with profiles
+  const fetchPlayers = async () => {
+    const { data } = await supabase
+      .from("game_players")
+      .select("*, profiles(*)")
+      .eq("game_session_id", sessionId)
+      .order("score", { ascending: false });
+    if (data) {
+      setPlayers(data as Player[]);
+    }
+  };
+
   useEffect(() => {
     // Subscribe to changes in game_players
     const channel = supabase
@@ -65,14 +77,9 @@ export function WaitingRoomClient({
           table: "game_players",
           filter: `game_session_id=eq.${sessionId}`,
         },
-        (payload) => {
-          if (payload.eventType === "INSERT") {
-            setPlayers((prev) => [...prev, payload.new as Player]);
-          } else if (payload.eventType === "DELETE") {
-            setPlayers((prev) =>
-              prev.filter((p) => p.id !== payload.old.id)
-            );
-          }
+        () => {
+          // Refresh all players when any change happens
+          fetchPlayers();
         }
       )
       .subscribe();

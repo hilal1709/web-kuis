@@ -1,11 +1,17 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { GameCodeForm } from "./GameCodeForm";
 
 export function HomeHero({ error }: { error?: string }) {
-  useEffect(() => {
-    const handleMove = (e: MouseEvent) => {
+  const rafRef = useRef<number>(0);
+
+  const handleMove = useCallback((e: MouseEvent) => {
+    if (rafRef.current) {
+      cancelAnimationFrame(rafRef.current);
+    }
+
+    rafRef.current = requestAnimationFrame(() => {
       const x = (window.innerWidth - e.pageX * 2) / 100;
       const y = (window.innerHeight - e.pageY * 2) / 100;
       document
@@ -13,10 +19,18 @@ export function HomeHero({ error }: { error?: string }) {
         .forEach((icon) => {
           icon.style.transform = `translateX(${x}px) translateY(${y}px)`;
         });
-    };
-    document.addEventListener("mousemove", handleMove);
-    return () => document.removeEventListener("mousemove", handleMove);
+    });
   }, []);
+
+  useEffect(() => {
+    document.addEventListener("mousemove", handleMove, { passive: true });
+    return () => {
+      document.removeEventListener("mousemove", handleMove);
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+      }
+    };
+  }, [handleMove]);
 
   return (
     <section className="relative min-h-[819px] flex flex-col items-center justify-center text-center px-6 py-20 overflow-hidden">

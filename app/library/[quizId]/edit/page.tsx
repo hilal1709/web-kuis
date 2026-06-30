@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/supabase/user";
-import { addQuestions } from "@/app/library/actions";
+import { addQuestions, updateQuiz } from "@/app/library/actions";
 import { TopNav } from "@/app/components/TopNav";
 import { Footer } from "@/app/components/Footer";
 import { BottomNav } from "@/app/components/BottomNav";
@@ -71,6 +71,30 @@ export default async function EditQuizPage({
               {addedCount} pertanyaan baru berhasil ditambahkan!
             </p>
           )}
+        </div>
+
+        <div className="mb-8 bg-white border-4 border-on-background p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+          <form action={updateQuiz} className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <input type="hidden" name="quiz_id" value={quizId} />
+            <div className="flex items-center gap-3">
+              <input
+                id="is_public_edit"
+                className="w-6 h-6"
+                type="checkbox"
+                name="is_public"
+                defaultChecked={quiz.is_public}
+              />
+              <label htmlFor="is_public_edit" className="font-label-bold">
+                Publikasikan kuis (semua orang bisa melihat)
+              </label>
+            </div>
+            <button
+              type="submit"
+              className="px-6 py-3 bg-primary text-on-primary border-4 border-on-background shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-label-bold uppercase"
+            >
+              Simpan Pengaturan
+            </button>
+          </form>
         </div>
 
         {questions.length > 0 && (
@@ -156,7 +180,7 @@ export default async function EditQuizPage({
       </main>
 
       <Footer />
-      <BottomNav active="search" />
+      <BottomNav active="library" />
     </div>
   );
 }

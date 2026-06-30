@@ -78,7 +78,7 @@ export async function joinGameSession(input: JoinGameSessionInput): Promise<
   // Cek status sesi game
   const { data: session } = await supabase
     .from("game_sessions")
-    .select("status, min_players")
+    .select("status, min_players, quiz_id, owner_id")
     .eq("id", input.gameSessionId)
     .single();
 
@@ -88,6 +88,21 @@ export async function joinGameSession(input: JoinGameSessionInput): Promise<
 
   if (session.status !== "waiting") {
     return { ok: false, error: "Sesi game sudah dimulai atau selesai." };
+  }
+
+  // Cek apakah kuisnya public atau user adalah pemiliknya
+  const { data: quiz } = await supabase
+    .from("quizzes")
+    .select("is_public, created_by")
+    .eq("id", session.quiz_id)
+    .single();
+
+  if (!quiz) {
+    return { ok: false, error: "Kuis tidak ditemukan." };
+  }
+
+  if (!quiz.is_public && user.id !== session.owner_id && user.id !== quiz.created_by) {
+    return { ok: false, error: "Kuis ini tidak publik." };
   }
 
   // Cek apakah user sudah join
@@ -113,6 +128,16 @@ export async function joinGameSession(input: JoinGameSessionInput): Promise<
 
   if (error || !data) {
     return { ok: false, error: error?.message ?? "Gagal bergabung ke sesi game." };
+  }
+
+  // Increment plays_count per pemain (hanya sekali)
+  if (session.quiz_id) {
+    await supabase.rpc("increment_plays", { quiz: session.quiz_id });
+    // Update plays_incremented
+    await supabase
+      .from("game_players")
+      .update({ plays_incremented: true })
+      .eq("id", data.id);
   }
 
   return { ok: true, gamePlayerId: data.id };
@@ -274,4 +299,101 @@ export async function getGameRanking(gameSessionId: string) {
     .order("score", { ascending: false });
 
   return players ?? [];
+}
+
+// End a game session (only owner)
+export async function endGameSession(gameSessionId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { ok: false, error: "Harus login dulu." };
+
+  // Check if user is owner
+  const { data: session } = await supabase
+    .from("game_sessions")
+    .select("owner_id")
+    .eq("id", gameSessionId)
+    .single();
+
+  if (!session) {
+    return { ok: false, error: "Sesi game tidak ditemukan." };
+  }
+
+  if (session.owner_id !== user.id) {
+    return { ok: false, error: "Anda bukan pemilik sesi game ini." };
+  }
+
+  // Update status to completed
+  const { error } = await supabase
+    .from("game_sessions")
+    .update({ status: "completed", ended_at: new Date().toISOString() })
+    .eq("id", gameSessionId);
+
+  if (error) {
+    return { ok: false, error: error.message ?? "Gagal mengakhiri game." };
+  }
+
+  return { ok: true };
+}
+
+// Get all game sessions owned by current user
+export async function getMyGameSessions() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return [];
+
+  const { data: sessions } = await supabase
+    .from("game_sessions")
+    .select("*, quizzes(*)")
+    .eq("owner_id", user.id)
+    .eq("hidden", false)
+    .order("created_at", { ascending: false });
+
+  return sessions ?? [];
+}
+
+// Get all hidden game sessions owned by current user
+export async function getMyHiddenGameSessions() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return [];
+
+  const { data: sessions } = await supabase
+    .from("game_sessions")
+    .select("*, quizzes(*)")
+    .eq("owner_id", user.id)
+    .eq("hidden", true)
+    .order("created_at", { ascending: false });
+
+  return sessions ?? [];
+}
+
+// Toggle game session hidden status
+export async function toggleGameSessionHidden(input: { gameSessionId: string; hidden: boolean }) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { ok: false, error: "Harus login dulu." };
+
+  const { error } = await supabase
+    .from("game_sessions")
+    .update({ hidden: input.hidden })
+    .eq("id", input.gameSessionId)
+    .eq("owner_id", user.id);
+
+  if (error) {
+    return { ok: false, error: error.message ?? "Gagal menyembunyikan game." };
+  }
+
+  return { ok: true };
 }

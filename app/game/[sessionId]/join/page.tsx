@@ -29,6 +29,21 @@ export default async function JoinGamePage({
     redirect("/library");
   }
 
+  // Cek apakah kuisnya public atau user adalah pemiliknya
+  const { data: quiz } = await supabase
+    .from("quizzes")
+    .select("is_public, created_by")
+    .eq("id", session.quiz_id)
+    .single();
+
+  if (!quiz) {
+    redirect("/library");
+  }
+
+  if (!quiz.is_public && user.id !== session.owner_id && user.id !== quiz.created_by) {
+    redirect("/?error=" + encodeURIComponent("Kuis ini tidak publik."));
+  }
+
   return (
     <JoinGameClient
       sessionId={sessionId}
