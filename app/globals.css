@@ -1,0 +1,258 @@
+@import "tailwindcss";
+
+@theme {
+  /* Fonts (next/font variables defined in layout.tsx) */
+  --font-body-md: var(--font-hanken-grotesk), sans-serif;
+  --font-body-lg: var(--font-hanken-grotesk), sans-serif;
+  --font-headline-md: var(--font-anybody), sans-serif;
+  --font-headline-lg: var(--font-anybody), sans-serif;
+  --font-headline-lg-mobile: var(--font-anybody), sans-serif;
+  --font-headline-xl: var(--font-anybody), sans-serif;
+  --font-label-bold: var(--font-space-grotesk), sans-serif;
+
+  /* Font sizes */
+  --text-body-md: 16px;
+  --text-body-md--line-height: 1.5;
+  --text-body-md--font-weight: 400;
+
+  --text-body-lg: 18px;
+  --text-body-lg--line-height: 1.6;
+  --text-body-lg--font-weight: 500;
+
+  --text-label-bold: 14px;
+  --text-label-bold--line-height: 1;
+  --text-label-bold--font-weight: 700;
+
+  --text-headline-md: 24px;
+  --text-headline-md--line-height: 1.2;
+  --text-headline-md--font-weight: 800;
+
+  --text-headline-lg: 32px;
+  --text-headline-lg--line-height: 1.2;
+  --text-headline-lg--font-weight: 800;
+
+  --text-headline-lg-mobile: 28px;
+  --text-headline-lg-mobile--line-height: 1.2;
+  --text-headline-lg-mobile--font-weight: 800;
+
+  --text-headline-xl: 48px;
+  --text-headline-xl--line-height: 1.1;
+  --text-headline-xl--letter-spacing: -0.02em;
+  --text-headline-xl--font-weight: 900;
+
+  /* Border radius */
+  --radius-DEFAULT: 0.125rem;
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.5rem;
+  --radius-full: 0.75rem;
+
+  /* Spacing tokens */
+  --spacing-gutter: 24px;
+  --spacing-margin: 16px;
+  --spacing-container-max: 1200px;
+
+  /* Colors */
+  --color-on-background: #1a1c1c;
+  --color-on-tertiary-container: #bdffdb;
+  --color-on-primary-container: #eeefff;
+  --color-on-primary-fixed-variant: #003ea8;
+  --color-primary-fixed-dim: #b4c5ff;
+  --color-surface: #f9f9f9;
+  --color-surface-container-high: #e8e8e8;
+  --color-secondary-fixed: #ffe083;
+  --color-inverse-on-surface: #f0f1f1;
+  --color-on-surface-variant: #434655;
+  --color-inverse-surface: #2f3131;
+  --color-outline: #737686;
+  --color-tertiary-fixed: #6ffbbe;
+  --color-on-secondary-fixed-variant: #574500;
+  --color-on-secondary-fixed: #231b00;
+  --color-background: #f9f9f9;
+  --color-error-container: #ffdad6;
+  --color-surface-container-highest: #e2e2e2;
+  --color-tertiary-fixed-dim: #4edea3;
+  --color-primary-fixed: #dbe1ff;
+  --color-tertiary-container: #007d55;
+  --color-inverse-primary: #b4c5ff;
+  --color-outline-variant: #c3c6d7;
+  --color-primary-container: #2563eb;
+  --color-on-tertiary-fixed: #002113;
+  --color-secondary: #735c00;
+  --color-surface-container-low: #f3f3f4;
+  --color-on-primary-fixed: #00174b;
+  --color-on-primary: #ffffff;
+  --color-on-surface: #1a1c1c;
+  --color-on-error: #ffffff;
+  --color-on-tertiary: #ffffff;
+  --color-on-secondary-container: #6f5900;
+  --color-surface-container: #eeeeee;
+  --color-secondary-container: #fed01b;
+  --color-on-error-container: #93000a;
+  --color-on-secondary: #ffffff;
+  --color-surface-variant: #e2e2e2;
+  --color-surface-container-lowest: #ffffff;
+  --color-error: #ba1a1a;
+  --color-surface-bright: #f9f9f9;
+  --color-tertiary: #006242;
+  --color-on-tertiary-fixed-variant: #005236;
+  --color-primary: #004ac6;
+  --color-secondary-fixed-dim: #eec200;
+  --color-surface-tint: #0053db;
+  --color-surface-dim: #dadada;
+}
+
+/* Dark mode driven by the .dark class on <html> */
+@custom-variant dark (&:where(.dark, .dark *));
+
+body {
+  background: var(--color-background);
+  color: var(--color-on-background);
+  font-family: var(--font-body-md);
+}
+
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined";
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+/* Neo-brutalist shadow helpers */
+.neo-shadow-sm {
+  box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 1);
+}
+.neo-shadow-md {
+  box-shadow: 8px 8px 0px 0px rgba(0, 0, 0, 1);
+}
+.neo-shadow-lg {
+  box-shadow: 12px 12px 0px 0px rgba(0, 0, 0, 1);
+}
+
+/* Neo-brutalist components */
+@layer components {
+  .neo-button-primary {
+    @apply bg-primary text-on-primary border-4 border-on-background transition-all;
+    box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 1);
+  }
+  .neo-button-primary:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0px 0px rgba(0, 0, 0, 1);
+  }
+  .neo-button-primary:active {
+    transform: translate(2px, 2px);
+    box-shadow: none;
+  }
+
+  .neo-button-secondary {
+    @apply bg-secondary-container text-on-secondary-container border-4 border-on-background transition-all;
+    box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 1);
+  }
+  .neo-button-secondary:hover {
+    transform: translate(-2px, -2px);
+    box-shadow: 6px 6px 0px 0px rgba(0, 0, 0, 1);
+  }
+  .neo-button-secondary:active {
+    transform: translate(2px, 2px);
+    box-shadow: none;
+  }
+
+  .neo-input {
+    @apply border-4 border-on-background outline-none;
+    box-shadow: 4px 4px 0px 0px rgba(0, 0, 0, 1);
+  }
+  .neo-input:focus {
+    @apply border-on-background bg-secondary-fixed;
+    --tw-ring-shadow: 0 0 #0000;
+  }
+
+  .neo-card {
+    @apply bg-surface border-4 border-on-background transition-all;
+    box-shadow: 8px 8px 0px 0px rgba(0, 0, 0, 1);
+  }
+}
+
+@keyframes float {
+  0% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-10px) rotate(1deg);
+  }
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+}
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* Material Symbols fill variant */
+.filled-icon {
+  font-variation-settings: "FILL" 1, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+/* Press-down feedback for neo buttons */
+.btn-interact:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0px 0px 0px 0px rgba(0, 0, 0, 1);
+}
+
+/* Hover/active lift used on leaderboard rows & buttons */
+.neo-shadow-hover {
+  transition: all 0.15s ease;
+}
+.neo-shadow-hover:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 6px 6px 0px 0px rgba(0, 0, 0, 1);
+}
+.neo-shadow-hover:active {
+  transform: translate(2px, 2px);
+  box-shadow: 0px 0px 0px 0px rgba(0, 0, 0, 1);
+}
+
+/* Custom neo-brutalist scrollbar */
+::-webkit-scrollbar {
+  width: 12px;
+}
+::-webkit-scrollbar-track {
+  background: #f9f9f9;
+  border-left: 2px solid #000;
+}
+::-webkit-scrollbar-thumb {
+  background: #fed01b;
+  border: 2px solid #000;
+}
+
+/* Timer pulse on the play screen */
+@keyframes progress-pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+.animate-pulse-fast {
+  animation: progress-pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Confetti on the results screen */
+.confetti-particle {
+  position: absolute;
+  animation: fall linear forwards;
+}
+@keyframes fall {
+  to {
+    transform: translateY(100vh) rotate(360deg);
+  }
+}
