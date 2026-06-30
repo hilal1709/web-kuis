@@ -111,6 +111,13 @@ export default async function LibraryPage({
                 </p>
               )}
             </div>
+            <Link
+              href="/library/create"
+              className="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary border-4 border-on-background shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all font-label-bold uppercase"
+            >
+              <MaterialIcon name="add_circle" />
+              Buat Assessment
+            </Link>
           </header>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
