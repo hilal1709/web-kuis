@@ -99,7 +99,7 @@ export default async function LibraryPage({
                 Koleksi Kuis Saya
               </h1>
               <p className="font-body-lg text-body-lg text-on-surface-variant mt-2">
-                Hanya kuis yang kamu buat sendiri.
+                Assessment yang Anda buat.
               </p>
               {created === "1" && (
                 <p className="mt-2 font-label-bold text-primary">
@@ -111,13 +111,6 @@ export default async function LibraryPage({
                 </p>
               )}
             </div>
-            <Link
-              href="/library/create"
-              className="flex items-center gap-2 px-6 py-3 bg-primary text-on-primary border-4 border-on-background shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all font-label-bold uppercase"
-            >
-              <MaterialIcon name="add_circle" />
-              Buat Kuis Baru
-            </Link>
           </header>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -203,21 +196,14 @@ export default async function LibraryPage({
             {quizzes.length === 0 && (
               <div className="col-span-full border-4 border-dashed border-on-background p-12 text-center">
                 <MaterialIcon
-                  name="add_circle"
+                  name="quiz"
                   className="text-6xl text-outline-variant"
                 />
                 <p className="font-headline-md text-on-surface-variant mt-4">
                   {cat
-                    ? "Belum ada kuis buatanmu di kategori ini."
-                    : "Kamu belum punya kuis. Klik \"Buat Kuis Baru\" untuk mulai!"}
+                    ? "Belum ada assessment di kategori ini."
+                    : "Belum ada assessment."}
                 </p>
-                <Link
-                  href="/library/create"
-                  className="inline-flex items-center gap-2 mt-6 neo-button-primary px-8 py-3 font-label-bold"
-                >
-                  <MaterialIcon name="add_circle" />
-                  BUAT KUIS BARU
-                </Link>
               </div>
             )}
           </div>

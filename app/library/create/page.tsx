@@ -56,7 +56,7 @@ export default async function CreateQuizPage({
                 <input
                   className="w-full neo-input p-4 bg-surface"
                   name="title"
-                  placeholder="Contoh: Quiz IPA Kelas 8"
+                  placeholder="Contoh: Assessment Teknis"
                   required
                 />
               </div>

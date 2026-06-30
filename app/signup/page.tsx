@@ -21,7 +21,7 @@ export default async function SignupPage({
       <div className="w-full max-w-md bg-white border-4 border-on-background p-8 md:p-10 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
         <h1 className="font-headline-md text-headline-md mb-2">Buat Akun Baru</h1>
         <p className="text-on-surface-variant mb-6">
-          Gabung ribuan siswa & mulai kumpulkan lencana!
+          Bergabung dan mulai buat assessment.
         </p>
 
         {error && (

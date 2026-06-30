@@ -21,9 +21,9 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "QUIZORAMA - Mainkan Quiz Seru!",
+  title: "QUIZORAMA - Assessment Platform",
   description:
-    "Platform quiz interaktif paling asik se-Indonesia. Tantang temanmu, kumpulkan lencana, dan jadilah yang terpintar di kelas!",
+    "Platform assessment interaktif untuk perusahaan. Buat kuis, evaluasi karyawan, dan pantau performa tim.",
 };
 
 export default function RootLayout({

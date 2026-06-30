@@ -22,18 +22,18 @@ export function HomeHero({ error }: { error?: string }) {
     <section className="relative min-h-[819px] flex flex-col items-center justify-center text-center px-6 py-20 overflow-hidden">
       <div className="z-10 max-w-4xl space-y-8 animate-float">
         <div className="inline-block bg-secondary-container border-2 border-on-background px-4 py-1 rounded-full font-label-bold text-label-bold rotate-[-2deg] neo-shadow-sm mb-4">
-          🎉 LEVEL UP BELAJARMU!
+          🎉 ASSESSMENT PLATFORM
         </div>
         <h1 className="font-headline-xl text-headline-xl leading-none">
-          MAIN. BELAJAR. <br />
+          BUAT. <br />
           <span className="text-primary underline decoration-8 decoration-secondary-container">
-            MENANGKAN
+            KELOLA
           </span>{" "}
-          REKOR.
+          ASSESSMENT.
         </h1>
         <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl mx-auto">
-          Platform quiz interaktif paling asik se-Indonesia. Tantang
-          temanmu, kumpulkan lencana, dan jadilah yang terpintar di kelas!
+          Platform assessment interaktif untuk perusahaan. Buat kuis,
+          evaluasi karyawan, dan pantau performa tim.
         </p>
 
         <GameCodeForm error={error} />

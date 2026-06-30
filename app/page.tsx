@@ -68,7 +68,7 @@ export default async function Home({
                   Kategori Populer
                 </h2>
                 <p className="text-on-surface-variant">
-                  Pilih topik favoritmu dan mulai asah otak!
+                  Pilih topik dan mulai assessment.
                 </p>
               </div>
               <Link
@@ -87,7 +87,7 @@ export default async function Home({
                   className="text-6xl text-outline-variant"
                 />
                 <p className="font-headline-md text-on-surface-variant mt-4">
-                  Belum ada kuis publik. Buat kuis pertamamu di Library!
+                  Belum ada assessment publik.
                 </p>
                 <Link
                   href="/library"
@@ -165,7 +165,7 @@ export default async function Home({
                           {cat.name}
                         </h3>
                         <p className="text-on-surface-variant text-sm">
-                          {cat.top_quiz?.title ?? `Kuis ${cat.name} seru menanti!`}
+                          {cat.top_quiz?.title ?? `Assessment ${cat.name} tersedia.`}
                         </p>
                       </div>
                       {cat.top_quiz && (
@@ -208,7 +208,7 @@ export default async function Home({
                     Kategori Lainnya?
                   </h3>
                   <p className="text-on-surface-variant text-center mt-2">
-                    Request topik quiz yang kamu mau atau buat sendiri sekarang!
+                    Buat assessment sesuai kebutuhan perusahaan.
                   </p>
                   <Link
                     href="/library"
@@ -268,11 +268,10 @@ export default async function Home({
           <div className="neo-card bg-secondary-fixed text-on-background p-12 md:p-20 max-w-4xl w-full text-center relative overflow-hidden">
             <div className="relative z-10">
               <h2 className="font-headline-xl text-headline-xl mb-6">
-                Siap Menjadi Sang Juara?
+                Siap Memulai Assessment?
               </h2>
               <p className="font-body-lg text-body-lg mb-10 max-w-xl mx-auto">
-                Gabung dengan ribuan siswa lainnya dan buktikan kemampuanmu di
-                papan peringkat global.
+                Bergabung dan mulai assessment untuk kebutuhan perusahaan.
               </p>
               <div className="flex flex-col md:flex-row gap-6 justify-center">
                 <Link

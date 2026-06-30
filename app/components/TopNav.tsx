@@ -48,7 +48,7 @@ export async function TopNav({ active }: { active?: ActiveLink }) {
         >
           <input
             className="bg-surface border-2 border-on-background py-2 px-4 pr-10 w-64 focus:outline-none focus:border-4 focus:bg-secondary-container transition-all neo-shadow-sm pointer-events-none"
-            placeholder="Cari kuis seru lainnya"
+            placeholder="Cari assessment lainnya"
             type="text"
             readOnly
             tabIndex={-1}
