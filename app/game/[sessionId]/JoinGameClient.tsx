@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MaterialIcon } from "@/app/components/MaterialIcon";
+import { gsap, EASE_OUT, EASE_BOUNCE } from "@/lib/gsap";
 import { joinGameSession } from "../actions";
 
 type Session = {
@@ -31,6 +32,17 @@ export function JoinGameClient({
   const router = useRouter();
   const [joining, setJoining] = useState(false);
   const [guestUsername, setGuestUsername] = useState("");
+  const cardRef = useRef<HTMLDivElement>(null);
+  const codeRef = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    const tl = gsap.timeline({ defaults: { ease: EASE_OUT } });
+    if (cardRef.current) tl.fromTo(cardRef.current, { opacity: 0, y: 40, scale: 0.95 }, { opacity: 1, y: 0, scale: 1, duration: 0.55 });
+    if (codeRef.current) tl.fromTo(codeRef.current, { opacity: 0, scale: 0.7 }, { opacity: 1, scale: 1, duration: 0.4, ease: EASE_BOUNCE }, "-=0.2");
+    if (btnRef.current) tl.fromTo(btnRef.current, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.35 }, "-=0.2");
+    return () => { tl.kill(); };
+  }, []);
 
   const handleJoin = async () => {
     setJoining(true);
@@ -56,16 +68,16 @@ export function JoinGameClient({
       <header className="w-full flex justify-between items-center px-margin md:px-gutter py-4 sticky top-0 z-50 bg-background border-b-4 border-on-background">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => router.push("/library")}
+            onClick={() => router.push("/")}
             className="bg-surface-container-high border-2 border-on-background p-2 neo-shadow-sm active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
           >
             <MaterialIcon name="close" className="block" />
           </button>
-          <div>
-            <p className="font-label-bold text-label-bold uppercase tracking-wider text-outline">
+          <div className="min-w-0">
+            <p className="font-label-bold text-label-bold uppercase tracking-wider text-outline truncate">
               {session.quizzes.categories.name}
             </p>
-            <p className="font-headline-md text-headline-md leading-tight">
+            <p className="font-headline-md text-headline-md leading-tight truncate">
               {session.quizzes.title}
             </p>
           </div>
@@ -75,7 +87,7 @@ export function JoinGameClient({
       {/* Main */}
       <main className="flex-grow flex flex-col items-center justify-center p-margin md:p-gutter max-w-container-max mx-auto w-full">
         <div className="w-full max-w-2xl text-center">
-          <div className="bg-surface border-4 border-on-background neo-shadow-md p-8 mb-8">
+          <div ref={cardRef} className="bg-surface border-4 border-on-background neo-shadow-md p-8 mb-8">
             <MaterialIcon name="sports_esports" filled className="text-[64px] mb-4" />
             <h1 className="font-headline-xl text-headline-lg-mobile md:text-headline-xl mb-4">
               Bergabung ke Game
@@ -86,7 +98,7 @@ export function JoinGameClient({
             </p>
           </div>
 
-          <div className="mb-8">
+          <div ref={codeRef} className="mb-8">
             <p className="font-label-bold text-label-bold text-outline mb-2">
               Kode Game
             </p>
@@ -122,6 +134,7 @@ export function JoinGameClient({
           )}
 
           <button
+            ref={btnRef}
             onClick={handleJoin}
             disabled={joining || (!userId && !guestUsername.trim())}
             className="neo-button-primary px-8 py-4 font-headline-md text-headline-md disabled:opacity-50 disabled:cursor-not-allowed"

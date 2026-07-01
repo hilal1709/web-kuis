@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MaterialIcon } from "@/app/components/MaterialIcon";
 import { createClient } from "@/lib/supabase/client";
+import { gsap, EASE_OUT, EASE_BOUNCE, popIn } from "@/lib/gsap";
 import { startGameSession } from "../actions";
 
 type Session = {
@@ -55,6 +56,12 @@ function WaitingRoomClientInner({
   const [starting, setStarting] = useState(false);
   const supabase = createClient();
 
+  const mainRef = useRef<HTMLDivElement>(null);
+  const statusRef = useRef<HTMLDivElement>(null);
+  const playersListRef = useRef<HTMLDivElement>(null);
+  const codeRef = useRef<HTMLDivElement>(null);
+  const prevPlayerCount = useRef(initialPlayers.length);
+
   // Dapatkan currentPlayerId dari search params atau localStorage
   const [currentPlayerId, setCurrentPlayerId] = useState<string | undefined>(initialCurrentPlayerId);
 
@@ -82,6 +89,30 @@ function WaitingRoomClientInner({
       setPlayers(data as Player[]);
     }
   };
+
+  // Page entrance animation
+  useEffect(() => {
+    const tl = gsap.timeline({ defaults: { ease: EASE_OUT } });
+    if (statusRef.current) tl.fromTo(statusRef.current, { opacity: 0, y: -20 }, { opacity: 1, y: 0, duration: 0.4 });
+    if (playersListRef.current) tl.fromTo(playersListRef.current, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.5 }, "-=0.2");
+    if (codeRef.current) tl.fromTo(codeRef.current, { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, duration: 0.4, ease: EASE_BOUNCE }, "-=0.2");
+    return () => { tl.kill(); };
+  }, []);
+
+  // Animate new player rows when players list changes
+  useEffect(() => {
+    if (!playersListRef.current) return;
+    const newCount = players.length;
+    if (newCount > prevPlayerCount.current) {
+      // Animate only the last added row
+      const rows = playersListRef.current.querySelectorAll("[data-player-row]");
+      const lastRow = rows[rows.length - 1];
+      if (lastRow) {
+        gsap.fromTo(lastRow, { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.35, ease: EASE_OUT });
+      }
+    }
+    prevPlayerCount.current = newCount;
+  }, [players]);
 
   useEffect(() => {
     // Subscribe to changes in game_players
@@ -154,18 +185,18 @@ function WaitingRoomClientInner({
     <div className="bg-background text-on-background font-body-md min-h-screen flex flex-col">
       {/* Header */}
       <header className="w-full flex justify-between items-center px-margin md:px-gutter py-4 sticky top-0 z-50 bg-background border-b-4 border-on-background">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 min-w-0">
           <button
             onClick={() => router.push("/library")}
-            className="bg-surface-container-high border-2 border-on-background p-2 neo-shadow-sm active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
+            className="shrink-0 bg-surface-container-high border-2 border-on-background p-2 neo-shadow-sm active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
           >
             <MaterialIcon name="close" className="block" />
           </button>
-          <div>
-            <p className="font-label-bold text-label-bold uppercase tracking-wider text-outline">
+          <div className="min-w-0">
+            <p className="font-label-bold text-label-bold uppercase tracking-wider text-outline truncate">
               {session.quizzes.categories.name}
             </p>
-            <p className="font-headline-md text-headline-md leading-tight">
+            <p className="font-headline-md text-headline-md leading-tight truncate">
               {session.quizzes.title}
             </p>
           </div>
@@ -183,9 +214,9 @@ function WaitingRoomClientInner({
 
       {/* Main */}
       <main className="flex-grow flex flex-col items-center justify-center p-margin md:p-gutter max-w-container-max mx-auto w-full">
-        <div className="w-full max-w-2xl">
+        <div ref={mainRef} className="w-full max-w-2xl">
           {/* Status */}
-          <div className="text-center mb-8">
+          <div ref={statusRef} className="text-center mb-8">
             <div
               className={`inline-block border-4 border-on-background px-6 py-3 font-headline-md text-headline-md neo-shadow-md ${
                 sessionStatus === "waiting"
@@ -198,33 +229,27 @@ function WaitingRoomClientInner({
           </div>
 
           {/* Players List */}
-          <div className="bg-surface border-4 border-on-background neo-shadow-md p-6">
+          <div ref={playersListRef} className="bg-surface border-4 border-on-background neo-shadow-md p-6">
             <h2 className="font-headline-md text-headline-md mb-6 text-center">
               Pemain Bergabung
             </h2>
 
             <div className="space-y-3">
               {players.map((player, index) => {
-                // Tentukan nama pemain
                 const playerName = player.user_id
                   ? player.profiles?.username || "Unknown"
                   : player.guest_username || "Guest";
-                
-                // Tentukan apakah ini current player (untuk guest, kita gunakan currentPlayerId)
                 const isCurrentPlayer =
                   (currentUserId && player.user_id === currentUserId) ||
                   (currentPlayerId && player.id === currentPlayerId);
-
-                // Tentukan apakah ini owner
-                const isOwner = player.user_id && player.user_id === session.owner_id;
+                const isOwnerPlayer = player.user_id && player.user_id === session.owner_id;
 
                 return (
                   <div
                     key={player.id}
+                    data-player-row
                     className={`flex items-center gap-4 p-4 border-4 border-on-background ${
-                      isCurrentPlayer
-                        ? "bg-primary-container"
-                        : "bg-surface-container"
+                      isCurrentPlayer ? "bg-primary-container" : "bg-surface-container"
                     }`}
                   >
                     <div className="w-10 h-10 flex items-center justify-center bg-on-background text-surface font-headline-md text-headline-md rounded-full">
@@ -240,7 +265,7 @@ function WaitingRoomClientInner({
                         </p>
                       )}
                     </div>
-                    {isOwner && (
+                    {isOwnerPlayer && (
                       <div className="bg-secondary-container border-2 border-on-background px-3 py-1 font-label-bold text-label-bold">
                         OWNER
                       </div>
@@ -280,7 +305,7 @@ function WaitingRoomClientInner({
           )}
 
           {/* Share Code */}
-          <div className="mt-8 text-center">
+          <div ref={codeRef} className="mt-8 text-center">
             <p className="font-label-bold text-label-bold text-outline mb-2">
               Kode Game
             </p>

@@ -1,25 +1,33 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import Link from "next/link";
+import { gsap, EASE_OUT, EASE_BOUNCE } from "@/lib/gsap";
 import { joinByGameCode } from "@/app/join/actions";
 import { SubmitButton } from "./SubmitButton";
 
 export function GameCodeForm({ error }: { error?: string }) {
   const cardRef = useRef<HTMLDivElement>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  // Subtle entrance — card slides up into its rotated resting position
+  useEffect(() => {
+    if (!cardRef.current) return;
+    gsap.fromTo(
+      cardRef.current,
+      { opacity: 0, y: 30, rotate: -3 },
+      { opacity: 1, y: 0, rotate: 1, duration: 0.55, ease: EASE_BOUNCE, delay: 0.1 },
+    );
+  }, []);
 
   const handleFocus = () => {
-    const card = cardRef.current;
-    if (!card) return;
-    card.classList.add("scale-[1.02]");
-    card.style.transform = "rotate(0deg)";
+    if (!cardRef.current) return;
+    gsap.to(cardRef.current, { scale: 1.02, rotate: 0, duration: 0.25, ease: EASE_OUT });
   };
 
   const handleBlur = () => {
-    const card = cardRef.current;
-    if (!card) return;
-    card.classList.remove("scale-[1.02]");
-    card.style.transform = "rotate(1deg)";
+    if (!cardRef.current) return;
+    gsap.to(cardRef.current, { scale: 1, rotate: 1, duration: 0.3, ease: EASE_OUT });
   };
 
   return (

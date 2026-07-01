@@ -3,6 +3,7 @@ import { signup } from "@/app/auth/actions";
 import { BrandLogo } from "@/app/components/BrandLogo";
 import { MaterialIcon } from "@/app/components/MaterialIcon";
 import { SubmitButton } from "@/app/components/SubmitButton";
+import { AnimatedFormCard } from "@/app/components/AnimatedFormCard";
 
 export default async function SignupPage({
   searchParams,
@@ -15,7 +16,7 @@ export default async function SignupPage({
     <main className="min-h-screen flex flex-col items-center justify-center px-6 py-12 bg-background">
       <BrandLogo href="/" width={188} className="mb-8" priority />
 
-      <div className="w-full max-w-md bg-white border-4 border-on-background p-8 md:p-10 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
+      <AnimatedFormCard className="w-full max-w-md bg-white border-4 border-on-background p-8 md:p-10 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]">
         <h1 className="font-headline-md text-headline-md mb-2">Buat Akun Baru</h1>
         <p className="text-on-surface-variant mb-6">
           Bergabung dan mulai buat assessment.
@@ -80,7 +81,7 @@ export default async function SignupPage({
             MASUK SINI
           </Link>
         </p>
-      </div>
+      </AnimatedFormCard>
     </main>
   );
 }

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import Link from "next/link";
 import { MaterialIcon } from "@/app/components/MaterialIcon";
+import { gsap, EASE_OUT } from "@/lib/gsap";
 import { QuizCard } from "./QuizCard";
 import { GameSessionCard } from "./GameSessionCard";
 import type { Category, Quiz, GameSession } from "@/lib/types";
@@ -20,6 +21,8 @@ interface LibraryClientProps {
 export function LibraryClient({ categories, quizzes, myGameSessions, myHiddenGameSessions, initialCat, created, questionCount }: LibraryClientProps) {
   const [selectedCat, setSelectedCat] = useState<string | undefined>(initialCat);
   const [activeTab, setActiveTab] = useState<'active' | 'hidden'>('active');
+  const quizGridRef = useRef<HTMLDivElement>(null);
+  const sessionsRef = useRef<HTMLDivElement>(null);
 
   const filteredQuizzes = useMemo(() => {
     return selectedCat
@@ -30,6 +33,29 @@ export function LibraryClient({ categories, quizzes, myGameSessions, myHiddenGam
   const currentGameSessions = useMemo(() => {
     return activeTab === 'active' ? myGameSessions : myHiddenGameSessions;
   }, [activeTab, myGameSessions, myHiddenGameSessions]);
+
+  // Entrance stagger
+  useEffect(() => {
+    const tl = gsap.timeline({ defaults: { ease: EASE_OUT } });
+    if (sessionsRef.current) {
+      const items = sessionsRef.current.querySelectorAll("[data-anim]");
+      if (items.length) tl.fromTo(items, { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.35, stagger: 0.07 });
+    }
+    if (quizGridRef.current) {
+      const cards = quizGridRef.current.querySelectorAll("[data-anim]");
+      if (cards.length) tl.fromTo(cards, { opacity: 0, y: 24 }, { opacity: 1, y: 0, duration: 0.35, stagger: 0.06 }, "-=0.2");
+    }
+    return () => { tl.kill(); };
+  }, []);
+
+  // Re-animate quiz cards when filter changes
+  useEffect(() => {
+    if (!quizGridRef.current) return;
+    const cards = quizGridRef.current.querySelectorAll("[data-anim]");
+    if (cards.length) {
+      gsap.fromTo(cards, { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.3, stagger: 0.05, ease: EASE_OUT });
+    }
+  }, [selectedCat]);
 
   return (
     <>
@@ -71,10 +97,12 @@ export function LibraryClient({ categories, quizzes, myGameSessions, myHiddenGam
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div ref={sessionsRef} className="space-y-4">
               {currentGameSessions.map((session) => (
-              <GameSessionCard key={session.id} session={session as any} isHidden={activeTab === 'hidden'} />
-            ))}
+                <div key={session.id} data-anim>
+                  <GameSessionCard session={session as any} isHidden={activeTab === 'hidden'} />
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -108,9 +136,11 @@ export function LibraryClient({ categories, quizzes, myGameSessions, myHiddenGam
             </Link>
           </header>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div ref={quizGridRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredQuizzes.map((quiz: Quiz, i: number) => (
-              <QuizCard key={quiz.id} quiz={quiz as any} index={i} />
+              <div key={quiz.id} data-anim>
+                <QuizCard quiz={quiz as any} index={i} />
+              </div>
             ))}
 
             {filteredQuizzes.length === 0 && (

@@ -53,26 +53,26 @@ export function GameSessionCard({ session, isHidden = false }: GameSessionCardPr
 
   return (
     <>
-      <div className="bg-surface border-4 border-on-background p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-surface border-4 border-on-background p-4 md:p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col gap-4">
         <div className="flex-grow">
-          <div className="flex items-center gap-3 mb-2">
-            <h3 className="font-headline-md text-headline-md">
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <h3 className="font-headline-md text-headline-md leading-tight">
               {session.quizzes?.title || "Kuis Tanpa Judul"}
             </h3>
             <span
-              className={`px-3 py-1 border-2 border-on-background font-label-bold text-[12px] uppercase ${STATUS_BADGE_CLASSES[session.status] || "bg-gray-100 text-gray-800"}`}
+              className={`shrink-0 px-3 py-1 border-2 border-on-background font-label-bold text-[12px] uppercase ${STATUS_BADGE_CLASSES[session.status] || "bg-gray-100 text-gray-800"}`}
             >
               {STATUS_LABELS[session.status] || session.status}
             </span>
           </div>
-          <div className="flex items-center gap-4 text-on-surface-variant">
+          <div className="flex flex-wrap items-center gap-2 md:gap-4 text-on-surface-variant">
             <span className="font-label-bold text-[11px] uppercase bg-surface-container-high px-2 py-0.5 border border-on-background">
-              Kode Game: {session.id.replace(/-/g, "").slice(0, 8).toUpperCase()}
+              Kode: {session.id.replace(/-/g, "").slice(0, 8).toUpperCase()}
             </span>
-            <span className="font-label-bold">
+            <span className="font-label-bold text-[11px]">
               {new Date(session.created_at).toLocaleDateString("id-ID", {
                 year: "numeric",
-                month: "long",
+                month: "short",
                 day: "numeric",
                 hour: "2-digit",
                 minute: "2-digit",
@@ -80,11 +80,11 @@ export function GameSessionCard({ session, isHidden = false }: GameSessionCardPr
             </span>
           </div>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-2">
           {!isHidden && session.status === "waiting" && (
             <Link
               href={`/game/${session.id}`}
-              className="flex items-center gap-2 px-6 py-3 bg-tertiary text-on-background border-4 border-on-background shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-label-bold uppercase"
+              className="flex items-center gap-2 px-4 py-2 bg-tertiary text-on-background border-4 border-on-background shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-label-bold uppercase text-sm"
             >
               <MaterialIcon name="play_arrow" />
               Lanjutkan
@@ -93,7 +93,7 @@ export function GameSessionCard({ session, isHidden = false }: GameSessionCardPr
           {!isHidden && session.status === "active" && (
             <Link
               href={`/game/${session.id}/play`}
-              className="flex items-center gap-2 px-6 py-3 bg-tertiary text-on-background border-4 border-on-background shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-label-bold uppercase"
+              className="flex items-center gap-2 px-4 py-2 bg-tertiary text-on-background border-4 border-on-background shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-label-bold uppercase text-sm"
             >
               <MaterialIcon name="play_arrow" />
               Lanjutkan
@@ -102,7 +102,7 @@ export function GameSessionCard({ session, isHidden = false }: GameSessionCardPr
           {session.status === "completed" && (
             <Link
               href={`/game/${session.id}/results`}
-              className="flex items-center gap-2 px-6 py-3 bg-primary-container text-on-primary-container border-4 border-on-background shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-label-bold uppercase"
+              className="flex items-center gap-2 px-4 py-2 bg-primary-container text-on-primary-container border-4 border-on-background shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-label-bold uppercase text-sm"
             >
               <MaterialIcon name="assessment" />
               Lihat Hasil
@@ -111,7 +111,7 @@ export function GameSessionCard({ session, isHidden = false }: GameSessionCardPr
           {!isHidden && isActiveOrWaiting && (
             <button
               onClick={() => setShowEndModal(true)}
-              className="flex items-center gap-2 px-6 py-3 bg-error text-on-error border-4 border-on-background shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-label-bold uppercase active:translate-x-0 active:translate-y-0 active:shadow-none"
+              className="flex items-center gap-2 px-4 py-2 bg-error text-on-error border-4 border-on-background shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-label-bold uppercase text-sm active:translate-x-0 active:translate-y-0 active:shadow-none"
             >
               <MaterialIcon name="stop" />
               Akhiri
@@ -120,7 +120,7 @@ export function GameSessionCard({ session, isHidden = false }: GameSessionCardPr
           {!isHidden ? (
             <button
               onClick={() => setShowHideModal(true)}
-              className="flex items-center gap-2 px-6 py-3 bg-outline text-on-surface border-4 border-on-background shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-label-bold uppercase active:translate-x-0 active:translate-y-0 active:shadow-none"
+              className="flex items-center gap-2 px-4 py-2 bg-outline text-on-surface border-4 border-on-background shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-label-bold uppercase text-sm active:translate-x-0 active:translate-y-0 active:shadow-none"
             >
               <MaterialIcon name="visibility_off" />
               Sembunyikan
@@ -128,7 +128,7 @@ export function GameSessionCard({ session, isHidden = false }: GameSessionCardPr
           ) : (
             <button
               onClick={handleUnhideGame}
-              className="flex items-center gap-2 px-6 py-3 bg-secondary text-on-secondary border-4 border-on-background shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-label-bold uppercase active:translate-x-0 active:translate-y-0 active:shadow-none"
+              className="flex items-center gap-2 px-4 py-2 bg-secondary text-on-secondary border-4 border-on-background shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-label-bold uppercase text-sm active:translate-x-0 active:translate-y-0 active:shadow-none"
             >
               <MaterialIcon name="visibility" />
               Tampilkan

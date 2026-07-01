@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MaterialIcon } from "@/app/components/MaterialIcon";
 import { createClient } from "@/lib/supabase/client";
+import { gsap, EASE_OUT, EASE_BOUNCE } from "@/lib/gsap";
 import { endGameSession } from "../actions";
 
 type Session = {
@@ -46,10 +47,43 @@ export function HostLiveClient({
   const [players, setPlayers] = useState<Player[]>(initialPlayers);
   const [isEndingGame, setIsEndingGame] = useState(false);
   const supabase = createClient();
-  // Guard supaya auto-end hanya dipanggil sekali
   const endedRef = useRef(false);
+  const leaderboardRef = useRef<HTMLDivElement>(null);
+  const progressRef = useRef<HTMLDivElement>(null);
+  const prevScores = useRef<Record<string, number>>({});
 
   const finishedCount = players.filter((p) => p.finished_at).length;
+
+  // Page entrance
+  useEffect(() => {
+    const tl = gsap.timeline({ defaults: { ease: EASE_OUT } });
+    if (progressRef.current) {
+      tl.fromTo(progressRef.current, { opacity: 0, y: -16 }, { opacity: 1, y: 0, duration: 0.4 });
+    }
+    if (leaderboardRef.current) {
+      tl.fromTo(leaderboardRef.current, { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.5 }, "-=0.2");
+      const rows = leaderboardRef.current.querySelectorAll("[data-row]");
+      if (rows.length) {
+        tl.fromTo(rows, { opacity: 0, x: -20 }, { opacity: 1, x: 0, duration: 0.3, stagger: 0.06 }, "-=0.3");
+      }
+    }
+    return () => { tl.kill(); };
+  }, []);
+
+  // Animate score change when a player's score updates
+  useEffect(() => {
+    if (!leaderboardRef.current) return;
+    players.forEach((p) => {
+      const prev = prevScores.current[p.id] ?? 0;
+      if (p.score !== prev && prev > 0) {
+        const row = leaderboardRef.current!.querySelector(`[data-row="${p.id}"]`);
+        if (row) {
+          gsap.fromTo(row, { backgroundColor: "#fed01b" }, { backgroundColor: "transparent", duration: 0.8, ease: EASE_OUT });
+        }
+      }
+      prevScores.current[p.id] = p.score;
+    });
+  }, [players]);
 
   // Ambil ulang semua pemain (dengan profil) tiap ada perubahan
   const fetchPlayers = async () => {
@@ -140,11 +174,11 @@ export function HostLiveClient({
     <div className="bg-background text-on-background font-body-md min-h-screen flex flex-col">
       {/* Header */}
       <header className="w-full flex justify-between items-center px-margin md:px-gutter py-4 sticky top-0 z-50 bg-background border-b-4 border-on-background">
-        <div>
-          <p className="font-label-bold text-label-bold uppercase tracking-wider text-outline">
+        <div className="min-w-0">
+          <p className="font-label-bold text-label-bold uppercase tracking-wider text-outline truncate">
             {session.quizzes.categories.name}
           </p>
-          <p className="font-headline-md text-headline-md leading-tight">
+          <p className="font-headline-md text-headline-md leading-tight truncate">
             {session.quizzes.title}
           </p>
         </div>
@@ -158,7 +192,7 @@ export function HostLiveClient({
       <main className="flex-grow flex flex-col items-center p-margin md:p-gutter max-w-container-max mx-auto w-full">
         <div className="w-full max-w-2xl">
           {/* Progress */}
-          <div className="mb-6 p-4 bg-secondary-container border-4 border-on-background neo-shadow-md flex items-center justify-between">
+          <div ref={progressRef} className="mb-6 p-4 bg-secondary-container border-4 border-on-background neo-shadow-md flex items-center justify-between">
             <span className="font-body-lg text-body-lg font-bold flex items-center gap-2">
               <MaterialIcon name="flag" filled />
               {finishedCount} dari {players.length} pemain selesai
@@ -166,7 +200,7 @@ export function HostLiveClient({
           </div>
 
           {/* Leaderboard */}
-          <div className="bg-surface border-4 border-on-background neo-shadow-md p-6">
+          <div ref={leaderboardRef} className="bg-surface border-4 border-on-background neo-shadow-md p-6">
             <h2 className="font-headline-md text-headline-md mb-6 text-center flex items-center justify-center gap-2">
               <MaterialIcon name="leaderboard" filled />
               Peringkat Real-time
@@ -176,7 +210,8 @@ export function HostLiveClient({
               {sortedPlayers.map((player, index) => (
                 <div
                   key={player.id}
-                  className={`flex items-center gap-4 p-4 border-4 border-on-background ${
+                  data-row={player.id}
+                  className={`flex items-center gap-4 p-4 border-4 border-on-background transition-colors ${
                     index === 0
                       ? "bg-tertiary-container"
                       : index === 1

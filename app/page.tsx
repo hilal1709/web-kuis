@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { formatPlays } from "@/lib/utils";
 import { TopNav } from "@/app/components/TopNav";
 import { Footer } from "@/app/components/Footer";
 import { BottomNav } from "@/app/components/BottomNav";
 import { HomeHero } from "@/app/components/HomeHero";
+import { StatsSection } from "@/app/components/StatsSection";
 
 export default async function Home({
   searchParams,
@@ -33,58 +33,32 @@ export default async function Home({
         <HomeHero error={error} />
 
         {/* Stats — angka real dari database */}
-        <section className="py-20 bg-on-background text-white relative overflow-hidden">
+        <section className="py-12 md:py-20 bg-on-background text-white relative overflow-hidden">
           <div className="max-w-container-max mx-auto px-margin md:px-gutter relative z-10">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-12 text-center">
-              <div>
-                <div className="text-6xl font-headline-xl text-secondary-container mb-2">
-                  {formatPlays(playerCount ?? 0)}+
-                </div>
-                <div className="font-label-bold uppercase tracking-widest text-outline-variant">
-                  Pemain Terdaftar
-                </div>
-              </div>
-              <div>
-                <div className="text-6xl font-headline-xl text-primary-fixed-dim mb-2">
-                  {formatPlays(quizCount ?? 0)}+
-                </div>
-                <div className="font-label-bold uppercase tracking-widest text-outline-variant">
-                  Assessment Tersedia
-                </div>
-              </div>
-              <div>
-                <div className="text-6xl font-headline-xl text-tertiary-fixed-dim mb-2">
-                  {formatPlays(attemptCount ?? 0)}+
-                </div>
-                <div className="font-label-bold uppercase tracking-widest text-outline-variant">
-                  Permainan Selesai
-                </div>
-              </div>
-              <div>
-                <div className="text-6xl font-headline-xl text-secondary-fixed mb-2">
-                  24/7
-                </div>
-                <div className="font-label-bold uppercase tracking-widest text-outline-variant">
-                  Kompetisi Live
-                </div>
-              </div>
-            </div>
+            <StatsSection
+              stats={[
+                { value: playerCount ?? 0, suffix: "+", label: "Pemain Terdaftar", colorClass: "text-secondary-container" },
+                { value: quizCount ?? 0, suffix: "+", label: "Assessment Tersedia", colorClass: "text-primary-fixed-dim" },
+                { value: attemptCount ?? 0, suffix: "+", label: "Permainan Selesai", colorClass: "text-tertiary-fixed-dim" },
+                { value: 24, suffix: "/7", label: "Kompetisi Live", colorClass: "text-secondary-fixed" },
+              ]}
+            />
           </div>
           <div className="absolute top-0 right-0 w-1/3 h-full bg-primary opacity-10 skew-x-[-20deg] translate-x-20" />
         </section>
 
         {/* CTA */}
         {!user && (
-          <section className="py-24 px-margin md:px-gutter flex justify-center">
-            <div className="neo-card bg-secondary-fixed text-on-background p-12 md:p-20 max-w-4xl w-full text-center relative overflow-hidden">
+          <section className="py-12 md:py-24 px-margin md:px-gutter flex justify-center">
+            <div className="neo-card bg-secondary-fixed text-on-background p-8 md:p-20 max-w-4xl w-full text-center relative overflow-hidden">
               <div className="relative z-10">
-                <h2 className="font-headline-xl text-headline-xl mb-6">
+                <h2 className="font-headline-xl text-headline-lg-mobile md:text-headline-xl mb-4 md:mb-6">
                   Siap Memulai Assessment?
                 </h2>
-                <p className="font-body-lg text-body-lg mb-10 max-w-xl mx-auto">
+                <p className="font-body-lg text-body-lg mb-6 md:mb-10 max-w-xl mx-auto">
                   Bergabung dan mulai assessment untuk kebutuhan perusahaan.
                 </p>
-                <div className="flex flex-col md:flex-row gap-6 justify-center">
+                <div className="flex flex-col gap-4 md:flex-row md:gap-6 justify-center">
                   <Link
                     href="/signup"
                     className="neo-button-primary px-10 py-5 font-headline-md"

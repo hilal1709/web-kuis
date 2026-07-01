@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MaterialIcon } from "@/app/components/MaterialIcon";
 import { QuizBackgroundMusic } from "@/app/components/QuizBackgroundMusic";
+import { gsap, EASE_OUT, shake, popIn } from "@/lib/gsap";
 import { saveAttempt } from "@/app/play/actions";
 import type { Question } from "@/lib/types";
 
@@ -55,6 +56,12 @@ export function GameClient({
   const [wrongCount, setWrongCount] = useState(0);
   const [elapsed, setElapsed] = useState(0);
   const [saving, setSaving] = useState(false);
+
+  // Animation refs
+  const questionRef = useRef<HTMLElement>(null);
+  const optionsRef = useRef<HTMLDivElement>(null);
+  const scoreRef = useRef<HTMLSpanElement>(null);
+  const prevIndex = useRef(index);
 
   const current = questions[index];
   const currentResponse = responses[index];
@@ -130,8 +137,13 @@ export function GameClient({
       if (isCorrect) {
         setScore((v) => v + 100 + timeLeft * 10);
         setCorrectCount((v) => v + 1);
+        // Pop the score badge
+        if (scoreRef.current) popIn(scoreRef.current);
       } else {
         setWrongCount((v) => v + 1);
+        // Shake the chosen option button
+        const btn = optionsRef.current?.querySelector(`[data-opt-id="${optionId}"]`);
+        if (btn) shake(btn);
       }
     },
     [current.options, index, responses, saving, timeLeft],
@@ -179,6 +191,18 @@ export function GameClient({
 
   const progress = Math.round((index / total) * 100);
 
+  // Animate question transition when index changes
+  useEffect(() => {
+    if (prevIndex.current === index) return;
+    prevIndex.current = index;
+    const dir = index > (prevIndex.current ?? 0) ? 1 : -1;
+    const targets = [questionRef.current, optionsRef.current].filter(Boolean);
+    gsap.fromTo(targets,
+      { opacity: 0, x: 30 * dir },
+      { opacity: 1, x: 0, duration: 0.35, ease: EASE_OUT, stagger: 0.05, clearProps: "all" }
+    );
+  }, [index]);
+
   function optionClasses(optId: string, position: number) {
     // setelah terkunci: hijau utk benar, merah utk pilihan salah
     if (locked) {
@@ -199,19 +223,19 @@ export function GameClient({
 
       {/* Header */}
       <header className="w-full flex justify-between items-center px-margin md:px-gutter py-4 sticky top-0 z-50 bg-background border-b-4 border-on-background">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 min-w-0">
           <button
             type="button"
             onClick={goPrevOrExit}
-            className="bg-surface-container-high border-2 border-on-background p-2 neo-shadow-sm active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
+            className="shrink-0 bg-surface-container-high border-2 border-on-background p-2 neo-shadow-sm active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
           >
             <MaterialIcon name={index > 0 ? "arrow_back" : "close"} className="block" />
           </button>
-          <div className="hidden md:block">
-            <p className="font-label-bold text-label-bold uppercase tracking-wider text-outline">
+          <div className="hidden md:block min-w-0">
+            <p className="font-label-bold text-label-bold uppercase tracking-wider text-outline truncate">
               {categoryName}
             </p>
-            <p className="font-headline-md text-headline-md leading-tight">
+            <p className="font-headline-md text-headline-md leading-tight truncate">
               {quizTitle}
             </p>
           </div>
@@ -229,7 +253,7 @@ export function GameClient({
         <div className="flex items-center gap-3">
           <div className="bg-secondary-container border-2 border-on-background px-4 py-1 neo-shadow-sm flex items-center gap-2">
             <MaterialIcon name="stars" filled className="text-[20px]" />
-            <span className="font-label-bold text-label-bold">
+            <span ref={scoreRef} className="font-label-bold text-label-bold">
               {score.toLocaleString("id-ID")}
             </span>
           </div>
@@ -256,7 +280,7 @@ export function GameClient({
 
       {/* Main */}
       <main className="flex-grow flex flex-col items-center justify-center p-margin md:p-gutter max-w-container-max mx-auto w-full">
-        <section className="w-full mb-10 text-center">
+        <section ref={questionRef} className="w-full mb-10 text-center">
           <div className="inline-block bg-primary-fixed border-2 border-on-background px-4 py-1 mb-6 font-label-bold text-label-bold rounded-full">
             Pertanyaan {index + 1} dari {total}
           </div>
@@ -279,10 +303,11 @@ export function GameClient({
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-5xl">
+        <div ref={optionsRef} className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-5xl">
           {current.options.map((opt, i) => (
             <button
               key={opt.id}
+              data-opt-id={opt.id}
               disabled={locked}
               onClick={() => answer(opt.id)}
               className="btn-interact group relative flex items-stretch text-left bg-white border-4 border-on-background neo-shadow-md hover:neo-shadow-lg transition-all duration-200 disabled:cursor-default"
@@ -307,12 +332,12 @@ export function GameClient({
       </main>
 
       {/* Footer controls */}
-      <footer className="w-full p-margin md:p-gutter flex flex-col md:flex-row justify-between items-center gap-4 mt-auto">
-        <div className="flex gap-4">
+      <footer className="w-full p-margin md:p-gutter flex flex-col md:flex-row justify-between items-start md:items-center gap-3 mt-auto">
+        <div className="flex flex-wrap gap-2 md:gap-4">
           <button
             type="button"
             onClick={goPrevOrExit}
-            className="flex items-center gap-2 bg-surface-container border-2 border-on-background px-4 py-2 font-label-bold text-label-bold neo-shadow-sm btn-interact"
+            className="flex items-center gap-2 bg-surface-container border-2 border-on-background px-3 md:px-4 py-2 font-label-bold text-label-bold neo-shadow-sm btn-interact"
           >
             <MaterialIcon name={index > 0 ? "arrow_back" : "logout"} />
             {index > 0 ? "Kembali" : "Keluar"}
@@ -321,7 +346,7 @@ export function GameClient({
             type="button"
             disabled={locked || saving}
             onClick={skip}
-            className="flex items-center gap-2 bg-surface-container border-2 border-on-background px-4 py-2 font-label-bold text-label-bold neo-shadow-sm btn-interact disabled:opacity-50"
+            className="flex items-center gap-2 bg-surface-container border-2 border-on-background px-3 md:px-4 py-2 font-label-bold text-label-bold neo-shadow-sm btn-interact disabled:opacity-50"
           >
             <MaterialIcon name="skip_next" />
             Lewati
@@ -330,7 +355,7 @@ export function GameClient({
             type="button"
             disabled={!canGoNext}
             onClick={goNext}
-            className="flex items-center gap-2 bg-on-background text-surface border-2 border-on-background px-4 py-2 font-label-bold text-label-bold neo-shadow-sm btn-interact disabled:opacity-50"
+            className="flex items-center gap-2 bg-on-background text-surface border-2 border-on-background px-3 md:px-4 py-2 font-label-bold text-label-bold neo-shadow-sm btn-interact disabled:opacity-50"
           >
             <MaterialIcon name="arrow_forward" />
             {index + 1 < total ? "Selanjutnya" : saving ? "Menyimpan…" : "Submit"}
