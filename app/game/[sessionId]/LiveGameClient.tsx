@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MaterialIcon } from "@/app/components/MaterialIcon";
+import { QuizBackgroundMusic } from "@/app/components/QuizBackgroundMusic";
 import { createClient } from "@/lib/supabase/client";
 import { submitAnswer } from "../actions";
 import type { Question } from "@/lib/types";
@@ -45,11 +46,10 @@ type Player = {
   };
 };
 
-type GameAnswer = {
-  id: string;
-  game_player_id: string;
-  question_id: string;
-  is_correct: boolean;
+type Response = {
+  status: "unanswered" | "answered" | "skipped" | "timeout";
+  selectedId: string | null;
+  timeLeft: number;
 };
 
 interface LiveGameClientProps {
@@ -72,24 +72,35 @@ export function LiveGameClient({
   const router = useRouter();
   const [players, setPlayers] = useState<Player[]>(initialPlayers);
   const [sessionData, setSessionData] = useState(session);
-  const [index, setIndex] = useState(sessionData.current_question);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [locked, setLocked] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(questions[index]?.time_limit || 20);
-  const [elapsed, setElapsed] = useState(0);
+  const [index, setIndex] = useState(
+    Math.min(Math.max(sessionData.current_question, 0), Math.max(questions.length - 1, 0)),
+  );
+  const [responses, setResponses] = useState<Response[]>(
+    () =>
+      questions.map((q) => ({
+        status: "unanswered",
+        selectedId: null,
+        timeLeft: q.time_limit,
+      })) ?? [],
+  );
   const [answeredPlayers, setAnsweredPlayers] = useState<Set<string>>(new Set());
   const [finished, setFinished] = useState(false);
+  const [busy, setBusy] = useState(false);
   const supabase = createClient();
-  // Cegah maju soal terjadi dobel (mis. tombol + auto-advance timeout)
-  const advancingRef = useRef(false);
 
   const isOwner = sessionData.owner_id === currentUserId;
   const current = questions[index];
+  const currentResponse = responses[index];
+  const selectedId = currentResponse?.selectedId ?? null;
+  const locked = currentResponse?.status !== "unanswered";
+  const revealAnswer = currentResponse?.status === "answered";
+  const timeLeft = currentResponse?.timeLeft ?? current?.time_limit ?? 20;
+  const canGoNext = !busy && currentResponse?.status !== "unanswered";
   // Data pemain saat ini yang selalu terbaru dari realtime (skor, dll)
   const me = players.find((p) => p.id === currentPlayer.id) ?? currentPlayer;
 
   // Fetch all players (with profiles) when there are changes
-  const fetchPlayers = async () => {
+  const fetchPlayers = useCallback(async () => {
     const { data } = await supabase
       .from("game_players")
       .select("*, profiles(*)")
@@ -98,10 +109,10 @@ export function LiveGameClient({
     if (data) {
       setPlayers(data as Player[]);
     }
-  };
+  }, [sessionId, supabase]);
 
   // Fetch answers for current question
-  const fetchAnswers = async (questionId: string) => {
+  const fetchAnswers = useCallback(async (questionId: string) => {
     const { data } = await supabase
       .from("game_answers")
       .select("game_player_id, question_id")
@@ -111,13 +122,15 @@ export function LiveGameClient({
     } else {
       setAnsweredPlayers(new Set());
     }
-  };
+  }, [supabase]);
 
   // Subscribe to real-time updates
   useEffect(() => {
     // Fetch answers when question changes
     if (current?.id) {
-      fetchAnswers(current.id);
+      queueMicrotask(() => {
+        void fetchAnswers(current.id);
+      });
     }
 
     // Subscribe to player updates
@@ -182,81 +195,120 @@ export function LiveGameClient({
       sessionChannel.unsubscribe();
       answersChannel.unsubscribe();
     };
-  }, [sessionId, index, questions, current?.id, supabase]);
+  }, [current?.id, fetchAnswers, fetchPlayers, router, sessionId, supabase]);
 
   // Tandai pemain selesai (soal terakhir sudah dijawab)
   const finishGame = useCallback(async () => {
+    if (busy) return;
+    setBusy(true);
     await supabase
       .from("game_players")
       .update({ finished_at: new Date().toISOString() })
       .eq("id", currentPlayer.id);
     setFinished(true);
-  }, [supabase, currentPlayer.id]);
+    setBusy(false);
+  }, [busy, supabase, currentPlayer.id]);
 
   // Maju ke soal berikutnya (self-paced per pemain), atau selesai jika sudah soal terakhir
   const goNext = useCallback(() => {
-    if (advancingRef.current) return;
-    advancingRef.current = true;
-
+    if (!canGoNext) return;
     if (index + 1 < questions.length) {
-      const next = index + 1;
-      setIndex(next);
-      setSelectedId(null);
-      setLocked(false);
-      setTimeLeft(questions[next]?.time_limit || 20);
-      setElapsed(0);
-      if (questions[next]?.id) {
-        fetchAnswers(questions[next].id);
-      }
-      advancingRef.current = false;
-    } else {
-      finishGame();
+      setIndex((v) => v + 1);
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index, questions, finishGame]);
+    void finishGame();
+  }, [canGoNext, finishGame, index, questions.length]);
 
-  const answer = useCallback(
-    async (optionId: string | null, opts?: { autoAdvance?: boolean }) => {
-      if (locked) return;
-      setLocked(true);
-      setSelectedId(optionId);
+  const goPrevOrExit = useCallback(() => {
+    if (busy) return;
+    if (index > 0) {
+      setIndex((v) => Math.max(0, v - 1));
+      return;
+    }
+    router.push("/library");
+  }, [busy, index, router]);
 
-      await submitAnswer({
+  const commitResponse = useCallback(
+    async (
+      optionId: string | null,
+      status: Response["status"],
+    ): Promise<boolean> => {
+      if (busy || !current || !currentResponse || currentResponse.status !== "unanswered") {
+        return false;
+      }
+
+      setBusy(true);
+      const elapsed = Math.max(0, current.time_limit - timeLeft);
+      const result = await submitAnswer({
         gamePlayerId: currentPlayer.id,
         questionId: current.id,
-        optionId: optionId,
+        optionId,
         timeTaken: elapsed,
       });
 
-      // Timer habis tanpa menjawab → tampilkan jawaban benar sejenak lalu maju otomatis
-      if (opts?.autoAdvance) {
-        setTimeout(() => {
-          goNext();
-        }, 1500);
+      if (!result.ok) {
+        setBusy(false);
+        return false;
       }
+
+      setResponses((prev) => {
+        const resp = prev[index];
+        if (!resp || resp.status !== "unanswered") return prev;
+        const copy = [...prev];
+        copy[index] = { ...resp, status, selectedId: optionId };
+        return copy;
+      });
+      setBusy(false);
+      return true;
     },
-    [locked, current, currentPlayer.id, elapsed, goNext],
+    [busy, current, currentPlayer.id, currentResponse, index, timeLeft],
   );
+
+  const answer = useCallback(
+    async (optionId: string) => {
+      await commitResponse(optionId, "answered");
+    },
+    [commitResponse],
+  );
+
+  const skip = useCallback(async () => {
+    const ok = await commitResponse(null, "skipped");
+    if (!ok) return;
+    if (index + 1 < questions.length) {
+      setIndex((v) => v + 1);
+      return;
+    }
+    void finishGame();
+  }, [commitResponse, finishGame, index, questions.length]);
 
   // Timer
   useEffect(() => {
-    if (locked) return;
-    if (timeLeft <= 0) {
-      answer(null, { autoAdvance: true });
-      return;
-    }
+    if (busy) return;
+    if (currentResponse?.status !== "unanswered") return;
+    if (timeLeft <= 0) return;
     const t = setTimeout(() => {
-      setTimeLeft((v) => v - 1);
-      setElapsed((e) => e + 1);
+      if (timeLeft <= 1) {
+        void commitResponse(null, "timeout");
+        return;
+      }
+      setResponses((prev) => {
+        const resp = prev[index];
+        if (!resp || resp.status !== "unanswered") return prev;
+        const copy = [...prev];
+        copy[index] = { ...resp, timeLeft: resp.timeLeft - 1 };
+        return copy;
+      });
     }, 1000);
     return () => clearTimeout(t);
-  }, [timeLeft, locked, answer]);
+  }, [busy, commitResponse, currentResponse?.status, index, timeLeft]);
 
   function optionClasses(optId: string, position: number) {
     if (locked) {
       const opt = current?.options.find((o) => o.id === optId);
-      if (opt?.is_correct) return "bg-tertiary-fixed-dim";
-      if (optId === selectedId) return "bg-error-container";
+      if (revealAnswer) {
+        if (opt?.is_correct) return "bg-tertiary-fixed-dim";
+        if (optId === selectedId) return "bg-error-container";
+      }
       return "bg-white opacity-60";
     }
     return `bg-white ${HOVER_BG[position] ?? ""}`;
@@ -303,9 +355,18 @@ export function LiveGameClient({
 
   return (
     <div className="bg-background text-on-background font-body-md min-h-screen flex flex-col">
+      <QuizBackgroundMusic title="Lagu kuis live" />
+
       {/* Header */}
       <header className="w-full flex justify-between items-center px-margin md:px-gutter py-4 sticky top-0 z-50 bg-background border-b-4 border-on-background">
         <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={goPrevOrExit}
+            className="bg-surface-container-high border-2 border-on-background p-2 neo-shadow-sm active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
+          >
+            <MaterialIcon name={index > 0 ? "arrow_back" : "close"} className="block" />
+          </button>
           <div className="hidden md:block">
             <p className="font-label-bold text-label-bold uppercase tracking-wider text-outline">
               {sessionData.quizzes.categories.name}
@@ -367,7 +428,7 @@ export function LiveGameClient({
             {current.options.map((opt, i) => (
               <button
                 key={opt.id}
-                disabled={locked}
+                disabled={locked || busy}
                 onClick={() => answer(opt.id)}
                 className="btn-interact group relative flex items-stretch text-left bg-white border-4 border-on-background neo-shadow-md hover:neo-shadow-lg transition-all duration-200 disabled:cursor-default"
               >
@@ -449,20 +510,43 @@ export function LiveGameClient({
               })}
           </div>
 
-          {/* Tombol lanjut: muncul setelah pemain menjawab */}
-          {locked && (
-            <div className="mt-6 pt-4 border-t-4 border-on-background">
-              <button
-                onClick={goNext}
-                className="w-full neo-button-primary px-4 py-3 font-label-bold text-label-bold flex items-center justify-center gap-2"
-              >
-                {index + 1 < questions.length ? "SELANJUTNYA" : "SELESAI"}
-                <MaterialIcon name="arrow_forward" className="text-[20px]" />
-              </button>
-            </div>
-          )}
         </aside>
       </main>
+
+      <footer className="w-full p-margin md:p-gutter flex flex-col md:flex-row justify-between items-center gap-4 mt-auto">
+        <div className="flex flex-wrap gap-4">
+          <button
+            type="button"
+            onClick={goPrevOrExit}
+            className="flex items-center gap-2 bg-surface-container border-2 border-on-background px-4 py-2 font-label-bold text-label-bold neo-shadow-sm btn-interact"
+          >
+            <MaterialIcon name={index > 0 ? "arrow_back" : "logout"} />
+            {index > 0 ? "Kembali" : "Keluar"}
+          </button>
+          <button
+            type="button"
+            disabled={locked || busy}
+            onClick={skip}
+            className="flex items-center gap-2 bg-surface-container border-2 border-on-background px-4 py-2 font-label-bold text-label-bold neo-shadow-sm btn-interact disabled:opacity-50"
+          >
+            <MaterialIcon name="skip_next" />
+            Lewati
+          </button>
+          <button
+            type="button"
+            disabled={!canGoNext}
+            onClick={goNext}
+            className="flex items-center gap-2 bg-on-background text-surface border-2 border-on-background px-4 py-2 font-label-bold text-label-bold neo-shadow-sm btn-interact disabled:opacity-50"
+          >
+            <MaterialIcon name="arrow_forward" />
+            {index + 1 < questions.length
+              ? "Selanjutnya"
+              : busy
+                ? "Menyimpan…"
+                : "Submit"}
+          </button>
+        </div>
+      </footer>
     </div>
   );
 }

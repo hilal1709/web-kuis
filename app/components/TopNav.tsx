@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/supabase/user";
 import { signOut } from "@/app/auth/actions";
+import { BrandLogo } from "./BrandLogo";
 import { MaterialIcon } from "./MaterialIcon";
 
 type ActiveLink = "home" | "explore" | "library";
@@ -17,12 +18,7 @@ export async function TopNav({ active }: { active?: ActiveLink }) {
   return (
     <nav className="flex justify-between items-center w-full px-margin md:px-gutter py-4 sticky top-0 z-50 bg-background border-b-4 border-on-background shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
       <div className="flex items-center gap-8">
-        <Link
-          href="/"
-          className="font-headline-xl text-headline-md text-primary italic uppercase tracking-tighter"
-        >
-          QUIZORAMA
-        </Link>
+        <BrandLogo href="/" width={132} className="shrink-0" priority />
         <div className="hidden md:flex gap-6 items-center">
           {links.map((l) => (
             <Link
@@ -41,23 +37,6 @@ export async function TopNav({ active }: { active?: ActiveLink }) {
       </div>
 
       <div className="flex items-center gap-4">
-        <Link
-          href="/library"
-          className="relative hidden lg:block"
-          aria-label="Cari kuis"
-        >
-          <input
-            className="bg-surface border-2 border-on-background py-2 px-4 pr-10 w-64 focus:outline-none focus:border-4 focus:bg-secondary-container transition-all neo-shadow-sm pointer-events-none"
-            placeholder="Cari assessment lainnya"
-            type="text"
-            readOnly
-            tabIndex={-1}
-          />
-          <MaterialIcon
-            name="search"
-            className="absolute right-3 top-1/2 -translate-y-1/2"
-          />
-        </Link>
         {user ? (
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 border-2 border-on-background bg-secondary shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] overflow-hidden flex items-center justify-center">

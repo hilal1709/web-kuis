@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MaterialIcon } from "@/app/components/MaterialIcon";
+import { QuizBackgroundMusic } from "@/app/components/QuizBackgroundMusic";
 import { saveAttempt } from "@/app/play/actions";
 import type { Question } from "@/lib/types";
 
@@ -194,6 +195,8 @@ export function GameClient({
 
   return (
     <div className="bg-background text-on-background font-body-md min-h-screen flex flex-col">
+      <QuizBackgroundMusic title="Lagu kuis" />
+
       {/* Header */}
       <header className="w-full flex justify-between items-center px-margin md:px-gutter py-4 sticky top-0 z-50 bg-background border-b-4 border-on-background">
         <div className="flex items-center gap-4">
