@@ -289,6 +289,55 @@ export async function submitAnswer(input: SubmitAnswerInput): Promise<
   return { ok: true };
 }
 
+// Ambil pemain beserta profil-nya secara tahan-banting.
+// Idealnya cukup ".select('*, profiles(*)')", tapi jika relasi
+// game_players -> profiles tidak dikenali PostgREST (mis. FK user_id
+// sempat diarahkan ke auth.users), embed itu error dan mengembalikan
+// data null -> daftar pemain jadi kosong. Fallback: join manual.
+async function fetchPlayersWithProfiles(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  gameSessionId: string,
+) {
+  const embedded = await supabase
+    .from("game_players")
+    .select("*, profiles(*)")
+    .eq("game_session_id", gameSessionId)
+    .order("score", { ascending: false });
+
+  if (!embedded.error && embedded.data) {
+    return embedded.data;
+  }
+
+  // Fallback: ambil pemain tanpa embed, lalu tempelkan profil secara manual
+  const { data: players } = await supabase
+    .from("game_players")
+    .select("*")
+    .eq("game_session_id", gameSessionId)
+    .order("score", { ascending: false });
+
+  if (!players) return [];
+
+  const userIds = Array.from(
+    new Set(players.map((p) => p.user_id).filter((id): id is string => Boolean(id))),
+  );
+
+  const profilesById: Record<string, any> = {};
+  if (userIds.length) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("*")
+      .in("id", userIds);
+    for (const profile of profiles ?? []) {
+      profilesById[profile.id] = profile;
+    }
+  }
+
+  return players.map((p) => ({
+    ...p,
+    profiles: p.user_id ? profilesById[p.user_id] ?? null : null,
+  }));
+}
+
 // Get game session dengan data lengkap
 export async function getGameSession(gameSessionId: string) {
   const supabase = await createClient();
@@ -301,29 +350,18 @@ export async function getGameSession(gameSessionId: string) {
 
   if (!session) return null;
 
-  const { data: players } = await supabase
-    .from("game_players")
-    .select("*, profiles(*)")
-    .eq("game_session_id", gameSessionId)
-    .order("score", { ascending: false });
+  const players = await fetchPlayersWithProfiles(supabase, gameSessionId);
 
   return {
     session,
-    players: players ?? [],
+    players,
   };
 }
 
 // Get ranking real-time
 export async function getGameRanking(gameSessionId: string) {
   const supabase = await createClient();
-
-  const { data: players } = await supabase
-    .from("game_players")
-    .select("*, profiles(*)")
-    .eq("game_session_id", gameSessionId)
-    .order("score", { ascending: false });
-
-  return players ?? [];
+  return fetchPlayersWithProfiles(supabase, gameSessionId);
 }
 
 // End a game session (only owner)

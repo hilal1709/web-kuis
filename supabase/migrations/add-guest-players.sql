@@ -16,5 +16,9 @@ ALTER TABLE public.game_players ADD CONSTRAINT game_players_has_identity CHECK (
   (user_id IS NOT NULL) OR (guest_username IS NOT NULL)
 );
 
--- Tambahkan kembali constraint foreign key dengan on delete set null
-ALTER TABLE public.game_players ADD CONSTRAINT game_players_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE SET NULL;
+-- Tambahkan kembali constraint foreign key dengan on delete set null.
+-- PENTING: referensi harus ke public.profiles(id), BUKAN auth.users(id),
+-- agar PostgREST tetap mengenali relasi game_players -> profiles
+-- (dipakai oleh query ".select('*, profiles(*)')"). Jika diarahkan ke
+-- auth.users, embed profiles gagal dan pemain tidak bisa masuk ruang tunggu.
+ALTER TABLE public.game_players ADD CONSTRAINT game_players_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE SET NULL;

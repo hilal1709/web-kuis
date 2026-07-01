@@ -164,9 +164,10 @@ export function LiveGameClient({
         },
         (payload) => {
           setSessionData((prev) => ({ ...prev, ...payload.new }));
-          // Host mengakhiri game → ke halaman hasil
+          // Host mengakhiri game → ke halaman hasil.
+          // Sertakan gamePlayerId agar guest (tanpa akun) tetap dikenali di hasil.
           if (payload.new.status === "completed") {
-            router.push(`/game/${sessionId}/results`);
+            router.push(`/game/${sessionId}/results?gamePlayerId=${currentPlayer.id}`);
           }
         }
       )

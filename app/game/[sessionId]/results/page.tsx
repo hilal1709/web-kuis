@@ -5,19 +5,21 @@ import { GameResultsClient } from "../GameResultsClient";
 
 export default async function GameResultsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ sessionId: string }>;
+  searchParams?: Promise<{ gamePlayerId?: string }>;
 }) {
   const { sessionId } = await params;
+  const { gamePlayerId } = (await searchParams) || {};
   const supabase = await createClient();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect("/login");
-  }
+  // Catatan: guest (tanpa akun) juga harus bisa melihat hasil akhir,
+  // jadi jangan paksa login di sini.
 
   const gameData = await getGameSession(sessionId);
 
@@ -40,7 +42,8 @@ export default async function GameResultsPage({
       sessionId={sessionId}
       session={session}
       players={players}
-      currentUserId={user.id}
+      currentUserId={user ? user.id : null}
+      currentPlayerId={gamePlayerId}
     />
   );
 }

@@ -18,20 +18,22 @@ type Session = {
 
 type Player = {
   id: string;
-  user_id: string;
+  user_id: string | null;
+  guest_username: string | null;
   score: number;
   correct_count: number;
-  profiles: {
+  profiles?: {
     username: string;
     avatar_url: string | null;
-  };
+  } | null;
 };
 
 interface GameResultsClientProps {
   sessionId: string;
   session: Session;
   players: Player[];
-  currentUserId: string;
+  currentUserId: string | null; // bisa null untuk guest
+  currentPlayerId?: string;
 }
 
 export function GameResultsClient({
@@ -39,13 +41,22 @@ export function GameResultsClient({
   session,
   players,
   currentUserId,
+  currentPlayerId,
 }: GameResultsClientProps) {
   const router = useRouter();
 
+  // Cocokkan pemain saat ini lewat user_id (jika login) atau id pemain (untuk guest)
+  const isCurrentPlayer = (p: Player) =>
+    (!!currentUserId && p.user_id === currentUserId) ||
+    (!!currentPlayerId && p.id === currentPlayerId);
+
+  const getPlayerName = (p: Player) =>
+    p.user_id ? p.profiles?.username || "Unknown" : p.guest_username || "Guest";
+
   const sortedPlayers = [...players].sort((a, b) => b.score - a.score);
-  const currentPlayer = sortedPlayers.find((p) => p.user_id === currentUserId);
-  const currentRank = sortedPlayers.findIndex((p) => p.user_id === currentUserId) + 1;
-  const isOwner = session.owner_id === currentUserId;
+  const currentPlayer = sortedPlayers.find(isCurrentPlayer);
+  const currentRank = sortedPlayers.findIndex(isCurrentPlayer) + 1;
+  const isOwner = !!currentUserId && session.owner_id === currentUserId;
 
   return (
     <div className="bg-background text-on-background font-body-md min-h-screen flex flex-col">
@@ -153,7 +164,7 @@ export function GameResultsClient({
                       ? "bg-secondary-container"
                       : index === 2
                       ? "bg-primary-container"
-                      : player.user_id === currentUserId
+                      : isCurrentPlayer(player)
                       ? "bg-surface-container-high"
                       : "bg-surface-container"
                   }`}
@@ -163,9 +174,9 @@ export function GameResultsClient({
                   </div>
                   <div className="flex-1">
                     <p className="font-body-lg text-body-lg font-bold">
-                      {player.profiles.username}
+                      {getPlayerName(player)}
                     </p>
-                    {player.user_id === currentUserId && (
+                    {isCurrentPlayer(player) && (
                       <p className="font-label-bold text-label-bold text-outline">
                         Anda
                       </p>

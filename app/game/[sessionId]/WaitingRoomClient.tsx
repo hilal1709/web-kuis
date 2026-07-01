@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MaterialIcon } from "@/app/components/MaterialIcon";
 import { createClient } from "@/lib/supabase/client";
@@ -40,7 +40,7 @@ interface WaitingRoomClientProps {
   currentPlayerId?: string;
 }
 
-export function WaitingRoomClient({
+function WaitingRoomClientInner({
   sessionId,
   session,
   players: initialPlayers,
@@ -291,5 +291,15 @@ export function WaitingRoomClient({
         </div>
       </main>
     </div>
+  );
+}
+
+export function WaitingRoomClient(props: WaitingRoomClientProps) {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center">
+      <p className="font-headline-md">Memuat...</p>
+    </div>}>
+      <WaitingRoomClientInner {...props} />
+    </Suspense>
   );
 }
