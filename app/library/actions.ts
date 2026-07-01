@@ -237,3 +237,40 @@ export async function deleteQuiz(quizId: string) {
   revalidatePath("/");
   redirect("/library?deleted=1");
 }
+
+export async function deleteQuestion(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const questionId = String(formData.get("question_id") ?? "").trim();
+  const quizId = String(formData.get("quiz_id") ?? "").trim();
+
+  if (!user) redirect(`/login?redirect=/library/${quizId}/edit`);
+
+  const quiz = await assertQuizOwner(supabase, quizId, user.id);
+  if (!quiz) redirect(`/library/${quizId}/edit?error=${encodeURIComponent("Kuis tidak ditemukan atau bukan milik kamu.")}`);
+
+  // Check if question belongs to this quiz
+  const { data: question } = await supabase
+    .from("questions")
+    .select("id, quiz_id")
+    .eq("id", questionId)
+    .eq("quiz_id", quizId)
+    .single();
+
+  if (!question) {
+    redirect(`/library/${quizId}/edit?error=${encodeURIComponent("Pertanyaan tidak ditemukan.")}`);
+  }
+
+  const { error } = await supabase.from("questions").delete().eq("id", questionId);
+
+  if (error) {
+    redirect(`/library/${quizId}/edit?error=${encodeURIComponent(error.message ?? "Gagal menghapus pertanyaan.")}`);
+  }
+
+  revalidatePath(`/library/${quizId}/edit`);
+  revalidatePath(`/play/${quizId}`);
+  redirect(`/library/${quizId}/edit`);
+}

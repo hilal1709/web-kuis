@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/supabase/user";
 import { signOut } from "@/app/auth/actions";
-import logoRaw from "@/public/logo.PNG";
+import logoRaw from "@/public/logo.png";
 import { MaterialIcon } from "./MaterialIcon";
 import { SubmitButton } from "./SubmitButton";
 

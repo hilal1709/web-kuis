@@ -9,9 +9,8 @@ import { BottomNav } from "@/app/components/BottomNav";
 import { MaterialIcon } from "@/app/components/MaterialIcon";
 import { QuestionBuilder } from "@/app/components/QuestionBuilder";
 import { SubmitButton } from "@/app/components/SubmitButton";
+import { QuestionCard } from "@/app/library/QuestionCard";
 import type { Question } from "@/lib/types";
-
-const LETTERS = ["A", "B", "C", "D"];
 
 export default async function EditQuizPage({
   params,
@@ -104,34 +103,12 @@ export default async function EditQuizPage({
               Pertanyaan ({questions.length})
             </h2>
             {questions.map((q, idx) => (
-              <div
+              <QuestionCard
                 key={q.id}
-                className="bg-surface border-4 border-on-background p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]"
-              >
-                <div className="flex items-center justify-between gap-2 mb-1">
-                  <p className="font-label-bold text-primary">#{idx + 1}</p>
-                  <span className="inline-flex items-center gap-1 text-[12px] font-label-bold uppercase bg-secondary-container border border-on-background px-2 py-0.5">
-                    <MaterialIcon name="timer" className="text-[14px]" />
-                    {q.time_limit}s
-                  </span>
-                </div>
-                <p className="font-body-md mb-3">{q.question_text}</p>
-                <ul className="space-y-1 text-sm">
-                  {q.options.map((opt, i) => (
-                    <li
-                      key={opt.id}
-                      className={
-                        opt.is_correct
-                          ? "font-label-bold text-primary"
-                          : "text-on-surface-variant"
-                      }
-                    >
-                      {LETTERS[i]}. {opt.option_text}
-                      {opt.is_correct && " ✓"}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                question={q}
+                index={idx}
+                quizId={quizId}
+              />
             ))}
           </section>
         )}

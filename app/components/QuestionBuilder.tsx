@@ -10,33 +10,49 @@ import {
 
 const LETTERS = ["A", "B", "C", "D"];
 
+type InitialQuestion = {
+  text: string;
+  timeLimit: number;
+  options: string[];
+  correct: number;
+};
+
 export function QuestionBuilder({
   namePrefix = "q",
   minBlocks = 1,
+  initialQuestions = [],
 }: {
   namePrefix?: string;
   minBlocks?: number;
+  initialQuestions?: InitialQuestion[];
 }) {
-  const [nextId, setNextId] = useState(minBlocks);
-  const [blocks, setBlocks] = useState<number[]>(() =>
-    Array.from({ length: minBlocks }, (_, i) => i),
-  );
+  const initialCount = Math.max(minBlocks, initialQuestions.length || 0);
+  const [nextId, setNextId] = useState(initialCount);
+  const [blocks, setBlocks] = useState<{ id: number; initial?: InitialQuestion }[]>(() => {
+    if (initialQuestions.length > 0) {
+      return initialQuestions.map((question, i) => ({
+        id: i,
+        initial: question,
+      }));
+    }
+    return Array.from({ length: minBlocks }, (_, i) => ({ id: i }));
+  });
 
   const addBlock = () => {
-    setBlocks((b) => [...b, nextId]);
+    setBlocks((b) => [...b, { id: nextId }]);
     setNextId((n) => n + 1);
   };
 
   const removeBlock = (id: number) => {
     if (blocks.length <= 1) return;
-    setBlocks((b) => b.filter((x) => x !== id));
+    setBlocks((b) => b.filter((x) => x.id !== id));
   };
 
   return (
     <div className="space-y-6">
-      {blocks.map((id, displayIndex) => (
+      {blocks.map((block, displayIndex) => (
         <div
-          key={id}
+          key={block.id}
           className="border-4 border-on-background p-6 bg-surface-container-low space-y-4"
         >
           <div className="flex justify-between items-center gap-4">
@@ -46,7 +62,7 @@ export function QuestionBuilder({
             {blocks.length > 1 && (
               <button
                 type="button"
-                onClick={() => removeBlock(id)}
+                onClick={() => removeBlock(block.id)}
                 className="flex items-center gap-1 text-error font-label-bold text-[12px] uppercase hover:underline"
               >
                 <MaterialIcon name="delete" className="text-[18px]" />
@@ -61,8 +77,9 @@ export function QuestionBuilder({
             </label>
             <textarea
               className="w-full neo-input p-4 bg-surface min-h-[90px]"
-              name={`${namePrefix}_${id}_text`}
+              name={`${namePrefix}_${block.id}_text`}
               placeholder="Tulis pertanyaan…"
+              defaultValue={block.initial?.text ?? ""}
               required
             />
           </div>
@@ -75,10 +92,10 @@ export function QuestionBuilder({
               <input
                 className="w-28 neo-input p-3 bg-surface text-center font-label-bold"
                 type="number"
-                name={`${namePrefix}_${id}_time`}
+                name={`${namePrefix}_${block.id}_time`}
                 min={QUESTION_TIME_MIN}
                 max={QUESTION_TIME_MAX}
-                defaultValue={QUESTION_TIME_DEFAULT}
+                defaultValue={block.initial?.timeLimit ?? QUESTION_TIME_DEFAULT}
                 required
               />
               <span className="text-on-surface-variant text-sm font-label-bold">
@@ -97,16 +114,17 @@ export function QuestionBuilder({
                 </span>
                 <input
                   className="flex-1 neo-input p-3 bg-surface text-sm"
-                  name={`${namePrefix}_${id}_opt_${i}`}
+                  name={`${namePrefix}_${block.id}_opt_${i}`}
                   placeholder={`Pilihan ${letter}`}
+                  defaultValue={block.initial?.options[i] ?? ""}
                   required
                 />
                 <label className="flex items-center gap-1 font-label-bold text-[11px] uppercase shrink-0 cursor-pointer">
                   <input
                     type="radio"
-                    name={`${namePrefix}_${id}_correct`}
+                    name={`${namePrefix}_${block.id}_correct`}
                     value={String(i)}
-                    defaultChecked={i === 0}
+                    defaultChecked={(block.initial?.correct ?? 0) === i}
                     className="w-4 h-4 accent-primary"
                   />
                   Benar
