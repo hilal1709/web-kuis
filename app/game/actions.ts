@@ -9,6 +9,7 @@ export type CreateGameSessionInput = {
 
 export type JoinGameSessionInput = {
   gameSessionId: string;
+  guestUsername?: string; // untuk user yang belum login
 };
 
 export type StartGameSessionInput = {
@@ -73,7 +74,21 @@ export async function joinGameSession(input: JoinGameSessionInput): Promise<
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) return { ok: false, error: "Harus login dulu." };
+  // Validasi: jika tidak login, harus ada guestUsername
+  if (!user && !input.guestUsername) {
+    return { ok: false, error: "Masukkan username untuk bergabung." };
+  }
+
+  // Validasi guestUsername: tidak boleh kosong, minimal 2 karakter, maksimal 50
+  if (!user && input.guestUsername) {
+    const trimmedUsername = input.guestUsername.trim();
+    if (trimmedUsername.length < 2) {
+      return { ok: false, error: "Username terlalu pendek (min 2 karakter)." };
+    }
+    if (trimmedUsername.length > 50) {
+      return { ok: false, error: "Username terlalu panjang (maks 50 karakter)." };
+    }
+  }
 
   // Cek status sesi game
   const { data: session } = await supabase
@@ -90,7 +105,7 @@ export async function joinGameSession(input: JoinGameSessionInput): Promise<
     return { ok: false, error: "Sesi game sudah dimulai atau selesai." };
   }
 
-  // Cek apakah kuisnya public atau user adalah pemiliknya
+  // Cek apakah kuisnya public atau user adalah pemiliknya (jika login)
   const { data: quiz } = await supabase
     .from("quizzes")
     .select("is_public, created_by")
@@ -101,28 +116,41 @@ export async function joinGameSession(input: JoinGameSessionInput): Promise<
     return { ok: false, error: "Kuis tidak ditemukan." };
   }
 
-  if (!quiz.is_public && user.id !== session.owner_id && user.id !== quiz.created_by) {
+  // Jika user login, cek permission
+  if (user && !quiz.is_public && user.id !== session.owner_id && user.id !== quiz.created_by) {
     return { ok: false, error: "Kuis ini tidak publik." };
   }
 
-  // Cek apakah user sudah join
-  const { data: existing } = await supabase
-    .from("game_players")
-    .select("id")
-    .eq("game_session_id", input.gameSessionId)
-    .eq("user_id", user.id)
-    .maybeSingle();
+  // Cek apakah sudah join:
+  // - Jika user login: cek user_id
+  // - Jika guest: tidak bisa cek (karena tidak ada identitas permanen), biarkan join
+  if (user) {
+    const { data: existing } = await supabase
+      .from("game_players")
+      .select("id")
+      .eq("game_session_id", input.gameSessionId)
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-  if (existing) {
-    return { ok: true, gamePlayerId: existing.id };
+    if (existing) {
+      return { ok: true, gamePlayerId: existing.id };
+    }
+  }
+
+  // Insert game player
+  const insertData: any = {
+    game_session_id: input.gameSessionId,
+  };
+
+  if (user) {
+    insertData.user_id = user.id;
+  } else if (input.guestUsername) {
+    insertData.guest_username = input.guestUsername.trim();
   }
 
   const { data, error } = await supabase
     .from("game_players")
-    .insert({
-      game_session_id: input.gameSessionId,
-      user_id: user.id,
-    })
+    .insert(insertData)
     .select("id")
     .single();
 
@@ -210,14 +238,11 @@ export async function submitAnswer(input: SubmitAnswerInput): Promise<
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) return { ok: false, error: "Harus login dulu." };
-
-  // Cek apakah user adalah pemain
+  // Cek apakah player ada (untuk guest, tidak perlu user_id)
   const { data: player } = await supabase
     .from("game_players")
-    .select("id")
+    .select("id, user_id")
     .eq("id", input.gamePlayerId)
-    .eq("user_id", user.id)
     .single();
 
   if (!player) {

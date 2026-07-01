@@ -20,7 +20,7 @@ type Session = {
 interface JoinGameClientProps {
   sessionId: string;
   session: Session;
-  userId: string;
+  userId: string | null; // bisa null untuk guest
 }
 
 export function JoinGameClient({
@@ -30,10 +30,14 @@ export function JoinGameClient({
 }: JoinGameClientProps) {
   const router = useRouter();
   const [joining, setJoining] = useState(false);
+  const [guestUsername, setGuestUsername] = useState("");
 
   const handleJoin = async () => {
     setJoining(true);
-    const res = await joinGameSession({ gameSessionId: sessionId });
+    const res = await joinGameSession({
+      gameSessionId: sessionId,
+      guestUsername: userId ? undefined : guestUsername,
+    });
     if (res.ok) {
       router.push(`/game/${sessionId}`);
     } else {
@@ -96,9 +100,26 @@ export function JoinGameClient({
             </div>
           </div>
 
+          {/* Input Username untuk Guest */}
+          {!userId && (
+            <div className="mb-8 w-full">
+              <p className="font-label-bold text-label-bold text-outline mb-2">
+                Username Anda
+              </p>
+              <input
+                type="text"
+                value={guestUsername}
+                onChange={(e) => setGuestUsername(e.target.value)}
+                placeholder="Masukkan username"
+                maxLength={50}
+                className="w-full max-w-md neo-input p-5 text-center font-body-md text-body-md"
+              />
+            </div>
+          )}
+
           <button
             onClick={handleJoin}
-            disabled={joining}
+            disabled={joining || (!userId && !guestUsername.trim())}
             className="neo-button-primary px-8 py-4 font-headline-md text-headline-md disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {joining ? "BERGABUNG..." : "GABUNG SEKARANG"}

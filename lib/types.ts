@@ -73,7 +73,8 @@ export type GameSession = {
 export type GamePlayer = {
   id: string;
   game_session_id: string;
-  user_id: string;
+  user_id: string | null;
+  guest_username: string | null;
   score: number;
   correct_count: number;
   joined_at: string;

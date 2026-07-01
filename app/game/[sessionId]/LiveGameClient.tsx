@@ -37,13 +37,14 @@ type Session = {
 
 type Player = {
   id: string;
-  user_id: string;
+  user_id: string | null;
+  guest_username: string | null;
   score: number;
   correct_count: number;
-  profiles: {
+  profiles?: {
     username: string;
     avatar_url: string | null;
-  };
+  } | null;
 };
 
 type Response = {
@@ -58,7 +59,7 @@ interface LiveGameClientProps {
   players: Player[];
   questions: Question[];
   currentPlayer: Player;
-  currentUserId: string;
+  currentUserId: string | null; // bisa null untuk guest
 }
 
 export function LiveGameClient({
@@ -88,7 +89,7 @@ export function LiveGameClient({
   const [busy, setBusy] = useState(false);
   const supabase = createClient();
 
-  const isOwner = sessionData.owner_id === currentUserId;
+  const isOwner = currentUserId && sessionData.owner_id === currentUserId;
   const current = questions[index];
   const currentResponse = responses[index];
   const selectedId = currentResponse?.selectedId ?? null;
@@ -471,11 +472,24 @@ export function LiveGameClient({
               .sort((a, b) => b.score - a.score)
               .map((player, rank) => {
                 const hasAnswered = answeredPlayers.has(player.id);
+                // Tentukan nama pemain
+                const playerName = player.user_id
+                  ? player.profiles?.username || "Unknown"
+                  : player.guest_username || "Guest";
+                
+                // Tentukan apakah ini current player
+                const isCurrentPlayer =
+                  (currentUserId && player.user_id === currentUserId) ||
+                  player.id === currentPlayer.id;
+
+                // Tentukan apakah ini owner
+                const isOwnerPlayer = player.user_id && player.user_id === sessionData.owner_id;
+
                 return (
                   <div
                     key={player.id}
                     className={`flex items-center gap-3 p-3 border-2 border-on-background ${
-                      player.user_id === currentUserId
+                      isCurrentPlayer
                         ? "bg-primary-container"
                         : "bg-surface-container"
                     }`}
@@ -485,7 +499,7 @@ export function LiveGameClient({
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-body-md text-body-md font-bold truncate">
-                        {player.profiles.username}
+                        {playerName}
                       </p>
                       <p className="font-label-bold text-label-bold text-outline">
                         {player.score} pts
@@ -502,7 +516,7 @@ export function LiveGameClient({
                         )}
                       </div>
                     )}
-                    {player.user_id === sessionData.owner_id && (
+                    {isOwnerPlayer && (
                       <MaterialIcon name="crown" className="text-[16px] text-tertiary-fixed" />
                     )}
                   </div>

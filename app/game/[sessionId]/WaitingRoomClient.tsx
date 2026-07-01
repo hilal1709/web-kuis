@@ -21,13 +21,14 @@ type Session = {
 
 type Player = {
   id: string;
-  user_id: string;
+  user_id: string | null;
+  guest_username: string | null;
   score: number;
   correct_count: number;
-  profiles: {
+  profiles?: {
     username: string;
     avatar_url: string | null;
-  };
+  } | null;
 };
 
 interface WaitingRoomClientProps {
@@ -35,7 +36,7 @@ interface WaitingRoomClientProps {
   session: Session;
   players: Player[];
   isOwner: boolean;
-  currentUserId: string;
+  currentUserId: string | null; // bisa null untuk guest
   currentPlayerId?: string;
 }
 
@@ -178,35 +179,50 @@ export function WaitingRoomClient({
             </h2>
 
             <div className="space-y-3">
-              {players.map((player, index) => (
-                <div
-                  key={player.id}
-                  className={`flex items-center gap-4 p-4 border-4 border-on-background ${
-                    player.user_id === currentUserId
-                      ? "bg-primary-container"
-                      : "bg-surface-container"
-                  }`}
-                >
-                  <div className="w-10 h-10 flex items-center justify-center bg-on-background text-surface font-headline-md text-headline-md rounded-full">
-                    {index + 1}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-body-lg text-body-lg font-bold">
-                      {player.profiles.username}
-                    </p>
-                    {player.user_id === currentUserId && (
-                      <p className="font-label-bold text-label-bold text-outline">
-                        Anda
+              {players.map((player, index) => {
+                // Tentukan nama pemain
+                const playerName = player.user_id
+                  ? player.profiles?.username || "Unknown"
+                  : player.guest_username || "Guest";
+                
+                // Tentukan apakah ini current player (untuk guest, kita gunakan currentPlayerId)
+                const isCurrentPlayer =
+                  (currentUserId && player.user_id === currentUserId) ||
+                  (currentPlayerId && player.id === currentPlayerId);
+
+                // Tentukan apakah ini owner
+                const isOwner = player.user_id && player.user_id === session.owner_id;
+
+                return (
+                  <div
+                    key={player.id}
+                    className={`flex items-center gap-4 p-4 border-4 border-on-background ${
+                      isCurrentPlayer
+                        ? "bg-primary-container"
+                        : "bg-surface-container"
+                    }`}
+                  >
+                    <div className="w-10 h-10 flex items-center justify-center bg-on-background text-surface font-headline-md text-headline-md rounded-full">
+                      {index + 1}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-body-lg text-body-lg font-bold">
+                        {playerName}
                       </p>
+                      {isCurrentPlayer && (
+                        <p className="font-label-bold text-label-bold text-outline">
+                          Anda
+                        </p>
+                      )}
+                    </div>
+                    {isOwner && (
+                      <div className="bg-secondary-container border-2 border-on-background px-3 py-1 font-label-bold text-label-bold">
+                        OWNER
+                      </div>
                     )}
                   </div>
-                  {player.user_id === session.owner_id && (
-                    <div className="bg-secondary-container border-2 border-on-background px-3 py-1 font-label-bold text-label-bold">
-                      OWNER
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
 
               {players.length === 0 && (
                 <div className="text-center py-8 font-body-lg text-body-lg text-outline">

@@ -15,10 +15,6 @@ export default async function GameSessionPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect("/login");
-  }
-
   const gameData = await getGameSession(sessionId);
 
   if (!gameData) {
@@ -27,7 +23,7 @@ export default async function GameSessionPage({
 
   const { session, players } = gameData;
 
-  // Cek apakah kuisnya public atau user adalah pemiliknya
+  // Cek apakah kuisnya public atau user adalah pemiliknya (jika login)
   const { data: quiz } = await supabase
     .from("quizzes")
     .select("is_public, created_by")
@@ -38,7 +34,7 @@ export default async function GameSessionPage({
     redirect("/library");
   }
 
-  if (!quiz.is_public && user.id !== session.owner_id && user.id !== quiz.created_by) {
+  if (user && !quiz.is_public && user.id !== session.owner_id && user.id !== quiz.created_by) {
     redirect("/?error=" + encodeURIComponent("Kuis ini tidak publik."));
   }
 
@@ -52,14 +48,19 @@ export default async function GameSessionPage({
     redirect(`/game/${sessionId}/play`);
   }
 
-  // Cek apakah user adalah owner
-  const isOwner = session.owner_id === user.id;
+  // Cek apakah user adalah owner (hanya jika user login)
+  const isOwner = user ? session.owner_id === user.id : false;
 
-  // Cek apakah user sudah join
-  const player = players.find((p) => p.user_id === user.id);
+  // Cek apakah user sudah join (hanya jika user login)
+  const player = user ? players.find((p) => p.user_id === user.id) : undefined;
 
-  if (!player && !isOwner) {
-    // Redirect ke halaman join jika belum bergabung
+  // Jika user tidak login, redirect ke join
+  if (!user && !player) {
+    redirect(`/game/${sessionId}/join`);
+  }
+
+  // Jika user login tapi belum join dan bukan owner, redirect ke join
+  if (user && !player && !isOwner) {
     redirect(`/game/${sessionId}/join`);
   }
 
@@ -69,7 +70,7 @@ export default async function GameSessionPage({
       session={session}
       players={players}
       isOwner={isOwner}
-      currentUserId={user.id}
+      currentUserId={user ? user.id : null}
       currentPlayerId={player?.id}
     />
   );

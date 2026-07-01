@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { joinGameSession } from "../../actions";
 import { JoinGameClient } from "../JoinGameClient";
 
 export default async function JoinGamePage({
@@ -15,10 +14,6 @@ export default async function JoinGamePage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect("/login");
-  }
-
   const { data: session } = await supabase
     .from("game_sessions")
     .select("*, quizzes(*, categories(*))")
@@ -29,7 +24,7 @@ export default async function JoinGamePage({
     redirect("/library");
   }
 
-  // Cek apakah kuisnya public atau user adalah pemiliknya
+  // Cek apakah kuisnya public atau user adalah pemiliknya (jika login)
   const { data: quiz } = await supabase
     .from("quizzes")
     .select("is_public, created_by")
@@ -40,7 +35,7 @@ export default async function JoinGamePage({
     redirect("/library");
   }
 
-  if (!quiz.is_public && user.id !== session.owner_id && user.id !== quiz.created_by) {
+  if (user && !quiz.is_public && user.id !== session.owner_id && user.id !== quiz.created_by) {
     redirect("/?error=" + encodeURIComponent("Kuis ini tidak publik."));
   }
 
@@ -48,7 +43,7 @@ export default async function JoinGamePage({
     <JoinGameClient
       sessionId={sessionId}
       session={session}
-      userId={user.id}
+      userId={user ? user.id : null}
     />
   );
 }
