@@ -9,7 +9,8 @@
     "lint": "eslint",
     "db:setup": "node scripts/setup-db.mjs",
     "db:clear-seed": "node scripts/clear-seed.mjs",
-    "db:confirm-users": "node scripts/confirm-users.mjs"
+    "db:confirm-users": "node scripts/confirm-users.mjs",
+    "db:fix-guest-scoring": "node scripts/fix-guest-scoring.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.0",
