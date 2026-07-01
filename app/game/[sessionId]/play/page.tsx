@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getGameSession } from "../../actions";
 import { LiveGameClient } from "../LiveGameClient";
+import { HostLiveClient } from "../HostLiveClient";
 
 export default async function LiveGamePage({
   params,
@@ -27,6 +28,28 @@ export default async function LiveGamePage({
 
   const { session, players } = gameData;
 
+  // Sesi harus sedang berjalan
+  if (session.status !== "active") {
+    redirect(`/game/${sessionId}`);
+  }
+
+  // Cari pemain saat ini
+  const currentPlayer = players.find((p) => p.user_id === user.id);
+
+  // Owner yang tidak ikut bermain → tampilkan layar host (spectator + ranking realtime)
+  if (!currentPlayer) {
+    if (session.owner_id === user.id) {
+      return (
+        <HostLiveClient
+          sessionId={sessionId}
+          session={session}
+          players={players}
+        />
+      );
+    }
+    redirect(`/game/${sessionId}/join`);
+  }
+
   // Get questions for the quiz
   const { data: questions } = await supabase
     .from("questions")
@@ -36,18 +59,6 @@ export default async function LiveGamePage({
 
   if (!questions || questions.length === 0) {
     redirect("/library");
-  }
-
-  // Find current player
-  const currentPlayer = players.find((p) => p.user_id === user.id);
-
-  if (!currentPlayer) {
-    redirect(`/game/${sessionId}/join`);
-  }
-
-  // Check if session is active
-  if (session.status !== "active") {
-    redirect(`/game/${sessionId}`);
   }
 
   return (

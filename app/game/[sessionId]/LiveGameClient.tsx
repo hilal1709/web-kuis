@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MaterialIcon } from "@/app/components/MaterialIcon";
 import { createClient } from "@/lib/supabase/client";
-import { submitAnswer, endGameSession } from "../actions";
+import { submitAnswer } from "../actions";
 import type { Question } from "@/lib/types";
 
 const LETTERS = ["A", "B", "C", "D"];
@@ -78,11 +78,15 @@ export function LiveGameClient({
   const [timeLeft, setTimeLeft] = useState(questions[index]?.time_limit || 20);
   const [elapsed, setElapsed] = useState(0);
   const [answeredPlayers, setAnsweredPlayers] = useState<Set<string>>(new Set());
-  const [isEndingGame, setIsEndingGame] = useState(false);
+  const [finished, setFinished] = useState(false);
   const supabase = createClient();
+  // Cegah maju soal terjadi dobel (mis. tombol + auto-advance timeout)
+  const advancingRef = useRef(false);
 
   const isOwner = sessionData.owner_id === currentUserId;
   const current = questions[index];
+  // Data pemain saat ini yang selalu terbaru dari realtime (skor, dll)
+  const me = players.find((p) => p.id === currentPlayer.id) ?? currentPlayer;
 
   // Fetch all players (with profiles) when there are changes
   const fetchPlayers = async () => {
@@ -106,19 +110,6 @@ export function LiveGameClient({
       setAnsweredPlayers(new Set(data.map((a) => a.game_player_id)));
     } else {
       setAnsweredPlayers(new Set());
-    }
-  };
-
-  // Handle ending game manually
-  const handleEndGame = async () => {
-    if (!isOwner || isEndingGame) return;
-    setIsEndingGame(true);
-    const res = await endGameSession(sessionId);
-    if (res.ok) {
-      router.push(`/game/${sessionId}/results`);
-    } else {
-      alert(res.error);
-      setIsEndingGame(false);
     }
   };
 
@@ -159,21 +150,9 @@ export function LiveGameClient({
         },
         (payload) => {
           setSessionData((prev) => ({ ...prev, ...payload.new }));
-          // If game is completed, redirect to results
+          // Host mengakhiri game → ke halaman hasil
           if (payload.new.status === "completed") {
             router.push(`/game/${sessionId}/results`);
-            return;
-          }
-          if (payload.new.current_question !== index) {
-            const newIndex = payload.new.current_question;
-            setIndex(newIndex);
-            setSelectedId(null);
-            setLocked(false);
-            setTimeLeft(questions[newIndex]?.time_limit || 20);
-            // Fetch answers for new question
-            if (questions[newIndex]?.id) {
-              fetchAnswers(questions[newIndex].id);
-            }
           }
         }
       )
@@ -205,28 +184,42 @@ export function LiveGameClient({
     };
   }, [sessionId, index, questions, current?.id, supabase]);
 
-  // Timer
-  useEffect(() => {
-    if (locked) return;
-    if (timeLeft <= 0) {
-      answer(null);
-      return;
+  // Tandai pemain selesai (soal terakhir sudah dijawab)
+  const finishGame = useCallback(async () => {
+    await supabase
+      .from("game_players")
+      .update({ finished_at: new Date().toISOString() })
+      .eq("id", currentPlayer.id);
+    setFinished(true);
+  }, [supabase, currentPlayer.id]);
+
+  // Maju ke soal berikutnya (self-paced per pemain), atau selesai jika sudah soal terakhir
+  const goNext = useCallback(() => {
+    if (advancingRef.current) return;
+    advancingRef.current = true;
+
+    if (index + 1 < questions.length) {
+      const next = index + 1;
+      setIndex(next);
+      setSelectedId(null);
+      setLocked(false);
+      setTimeLeft(questions[next]?.time_limit || 20);
+      setElapsed(0);
+      if (questions[next]?.id) {
+        fetchAnswers(questions[next].id);
+      }
+      advancingRef.current = false;
+    } else {
+      finishGame();
     }
-    const t = setTimeout(() => {
-      setTimeLeft((v) => v - 1);
-      setElapsed((e) => e + 1);
-    }, 1000);
-    return () => clearTimeout(t);
-  }, [timeLeft, locked]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index, questions, finishGame]);
 
   const answer = useCallback(
-    async (optionId: string | null) => {
+    async (optionId: string | null, opts?: { autoAdvance?: boolean }) => {
       if (locked) return;
       setLocked(true);
       setSelectedId(optionId);
-
-      const chosen = current?.options.find((o) => o.id === optionId);
-      const isCorrect = !!chosen?.is_correct;
 
       await submitAnswer({
         gamePlayerId: currentPlayer.id,
@@ -235,38 +228,29 @@ export function LiveGameClient({
         timeTaken: elapsed,
       });
 
-      // Wait for next question or end
-      setTimeout(() => {
-        if (index + 1 < questions.length) {
-          // Owner advances question
-          if (isOwner) {
-            advanceQuestion();
-          }
-        } else {
-          // Game over
-          router.push(`/game/${sessionId}/results`);
-        }
-      }, 2000);
+      // Timer habis tanpa menjawab → tampilkan jawaban benar sejenak lalu maju otomatis
+      if (opts?.autoAdvance) {
+        setTimeout(() => {
+          goNext();
+        }, 1500);
+      }
     },
-    [locked, current, currentPlayer.id, elapsed, index, questions.length, isOwner, router],
+    [locked, current, currentPlayer.id, elapsed, goNext],
   );
 
-  const advanceQuestion = async () => {
-    if (index + 1 >= questions.length) {
-      // End game
-      await supabase
-        .from("game_sessions")
-        .update({ status: "completed", ended_at: new Date().toISOString() })
-        .eq("id", sessionId);
-      router.push(`/game/${sessionId}/results`);
+  // Timer
+  useEffect(() => {
+    if (locked) return;
+    if (timeLeft <= 0) {
+      answer(null, { autoAdvance: true });
       return;
     }
-
-    await supabase
-      .from("game_sessions")
-      .update({ current_question: index + 1 })
-      .eq("id", sessionId);
-  };
+    const t = setTimeout(() => {
+      setTimeLeft((v) => v - 1);
+      setElapsed((e) => e + 1);
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [timeLeft, locked, answer]);
 
   function optionClasses(optId: string, position: number) {
     if (locked) {
@@ -276,6 +260,37 @@ export function LiveGameClient({
       return "bg-white opacity-60";
     }
     return `bg-white ${HOVER_BG[position] ?? ""}`;
+  }
+
+  if (finished) {
+    const sorted = [...players].sort((a, b) => b.score - a.score);
+    const myRank = sorted.findIndex((p) => p.id === currentPlayer.id) + 1;
+    return (
+      <div className="bg-background text-on-background font-body-md min-h-screen flex flex-col items-center justify-center p-margin">
+        <div className="w-full max-w-lg bg-primary-container border-4 border-on-background neo-shadow-md p-8 text-center">
+          <MaterialIcon name="check_circle" filled className="text-[64px] mb-4" />
+          <h1 className="font-headline-xl text-headline-lg-mobile md:text-headline-xl mb-2">
+            Selesai!
+          </h1>
+          <p className="font-body-lg text-body-lg mb-6">
+            Menunggu host mengakhiri kuis…
+          </p>
+          <div className="flex justify-center gap-8">
+            <div>
+              <p className="font-label-bold text-label-bold text-outline">Peringkat</p>
+              <p className="font-headline-md text-headline-md">#{myRank}</p>
+            </div>
+            <div className="w-px bg-on-background" />
+            <div>
+              <p className="font-label-bold text-label-bold text-outline">Skor</p>
+              <p className="font-headline-md text-headline-md">
+                {me.score.toLocaleString("id-ID")}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!current) {
@@ -305,7 +320,7 @@ export function LiveGameClient({
           <div className="bg-secondary-container border-2 border-on-background px-4 py-1 neo-shadow-sm flex items-center gap-2">
             <MaterialIcon name="stars" filled className="text-[20px]" />
             <span className="font-label-bold text-label-bold">
-              {currentPlayer.score.toLocaleString("id-ID")}
+              {me.score.toLocaleString("id-ID")}
             </span>
           </div>
           <div
@@ -434,22 +449,15 @@ export function LiveGameClient({
               })}
           </div>
 
-          {/* Owner Controls */}
-          {isOwner && (
-            <div className="mt-6 pt-4 border-t-4 border-on-background space-y-3">
+          {/* Tombol lanjut: muncul setelah pemain menjawab */}
+          {locked && (
+            <div className="mt-6 pt-4 border-t-4 border-on-background">
               <button
-                onClick={advanceQuestion}
-                disabled={locked}
-                className="w-full neo-button-primary px-4 py-3 font-label-bold text-label-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={goNext}
+                className="w-full neo-button-primary px-4 py-3 font-label-bold text-label-bold flex items-center justify-center gap-2"
               >
-                {index + 1 < questions.length ? "PERTANYAAN SELANJUTNYA" : "SELESAI GAME"}
-              </button>
-              <button
-                onClick={handleEndGame}
-                disabled={isEndingGame}
-                className="w-full bg-error text-on-error border-4 border-on-background px-4 py-3 font-label-bold text-label-bold shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all active:translate-x-0 active:translate-y-0 active:shadow-none disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isEndingGame ? "MENGHENTIKAN..." : "AKHIRI GAME SEKARANG"}
+                {index + 1 < questions.length ? "SELANJUTNYA" : "SELESAI"}
+                <MaterialIcon name="arrow_forward" className="text-[20px]" />
               </button>
             </div>
           )}

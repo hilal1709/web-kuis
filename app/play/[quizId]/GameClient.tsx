@@ -1,8 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { MaterialIcon } from "@/app/components/MaterialIcon";
 import { saveAttempt } from "@/app/play/actions";
 import type { Question } from "@/lib/types";
@@ -21,6 +20,12 @@ const HOVER_BG = [
   "group-hover:bg-error-container",
 ];
 
+type Response = {
+  status: "unanswered" | "answered" | "skipped" | "timeout";
+  selectedId: string | null;
+  timeLeft: number;
+};
+
 export function GameClient({
   quizId,
   categoryName,
@@ -36,8 +41,14 @@ export function GameClient({
   const total = questions.length;
 
   const [index, setIndex] = useState(0);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [locked, setLocked] = useState(false);
+  const [responses, setResponses] = useState<Response[]>(
+    () =>
+      questions.map((q) => ({
+        status: "unanswered",
+        selectedId: null,
+        timeLeft: q.time_limit,
+      })) ?? [],
+  );
   const [score, setScore] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
   const [wrongCount, setWrongCount] = useState(0);
@@ -45,8 +56,11 @@ export function GameClient({
   const [saving, setSaving] = useState(false);
 
   const current = questions[index];
-  const [timeLeft, setTimeLeft] = useState(current.time_limit);
-  const advanceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentResponse = responses[index];
+  const timeLeft = currentResponse?.timeLeft ?? current.time_limit;
+  const locked = currentResponse?.status !== "unanswered";
+  const revealAnswer = currentResponse?.status === "answered";
+  const selectedId = currentResponse?.selectedId ?? null;
 
   const finish = useCallback(
     async (finalScore: number, finalCorrect: number) => {
@@ -74,65 +88,93 @@ export function GameClient({
     [quizId, total, elapsed, router, quizTitle],
   );
 
-  const goNext = useCallback(
-    (nextScore: number, nextCorrect: number) => {
-      if (index + 1 < total) {
-        const ni = index + 1;
-        setIndex(ni);
-        setSelectedId(null);
-        setLocked(false);
-        setTimeLeft(questions[ni].time_limit);
-      } else {
-        void finish(nextScore, nextCorrect);
-      }
-    },
-    [index, total, questions, finish],
-  );
+  const canGoNext = useMemo(() => {
+    if (saving) return false;
+    return currentResponse?.status !== "unanswered";
+  }, [currentResponse?.status, saving]);
+
+  const goNext = useCallback(() => {
+    if (!canGoNext) return;
+    if (index + 1 < total) {
+      setIndex((v) => v + 1);
+      return;
+    }
+    void finish(score, correctCount);
+  }, [canGoNext, index, total, finish, score, correctCount]);
+
+  const goPrevOrExit = useCallback(() => {
+    if (saving) return;
+    if (index > 0) {
+      setIndex((v) => Math.max(0, v - 1));
+      return;
+    }
+    router.push("/library");
+  }, [index, router, saving]);
 
   const answer = useCallback(
-    (optionId: string | null) => {
-      if (locked) return;
-      setLocked(true);
-      setSelectedId(optionId);
+    (optionId: string) => {
+      if (saving) return;
+      const resp = responses[index];
+      if (!resp || resp.status !== "unanswered") return;
 
       const chosen = current.options.find((o) => o.id === optionId);
       const isCorrect = !!chosen?.is_correct;
 
-      let nextScore = score;
-      let nextCorrect = correctCount;
-      if (isCorrect) {
-        nextScore = score + 100 + timeLeft * 10;
-        nextCorrect = correctCount + 1;
-        setScore(nextScore);
-        setCorrectCount(nextCorrect);
-      } else {
-        setWrongCount((w) => w + 1);
-      }
+      setResponses((prev) => {
+        const copy = [...prev];
+        copy[index] = { ...resp, status: "answered", selectedId: optionId };
+        return copy;
+      });
 
-      advanceTimer.current = setTimeout(() => goNext(nextScore, nextCorrect), 1400);
+      if (isCorrect) {
+        setScore((v) => v + 100 + timeLeft * 10);
+        setCorrectCount((v) => v + 1);
+      } else {
+        setWrongCount((v) => v + 1);
+      }
     },
-    [locked, current, score, correctCount, timeLeft, goNext],
+    [current.options, index, responses, saving, timeLeft],
   );
+
+  const skip = useCallback(() => {
+    if (saving) return;
+    const resp = responses[index];
+    if (!resp || resp.status !== "unanswered") return;
+    setResponses((prev) => {
+      const copy = [...prev];
+      copy[index] = { ...resp, status: "skipped", selectedId: null };
+      return copy;
+    });
+    if (index + 1 < total) {
+      setIndex((v) => v + 1);
+      return;
+    }
+    void finish(score, correctCount);
+  }, [correctCount, finish, index, responses, saving, score, total]);
 
   // Timer per pertanyaan
   useEffect(() => {
-    if (locked) return;
-    if (timeLeft <= 0) {
-      answer(null); // waktu habis = jawaban kosong
-      return;
-    }
+    if (saving) return;
+    if (currentResponse?.status !== "unanswered") return;
+    if (timeLeft <= 0) return;
     const t = setTimeout(() => {
-      setTimeLeft((v) => v - 1);
+      setResponses((prev) => {
+        const resp = prev[index];
+        if (!resp || resp.status !== "unanswered") return prev;
+        const nextTimeLeft = Math.max(0, resp.timeLeft - 1);
+        const copy = [...prev];
+        copy[index] = {
+          ...resp,
+          timeLeft: nextTimeLeft,
+          status: nextTimeLeft === 0 ? "timeout" : resp.status,
+          selectedId: nextTimeLeft === 0 ? null : resp.selectedId,
+        };
+        return copy;
+      });
       setElapsed((e) => e + 1);
     }, 1000);
     return () => clearTimeout(t);
-  }, [timeLeft, locked, answer]);
-
-  useEffect(() => {
-    return () => {
-      if (advanceTimer.current) clearTimeout(advanceTimer.current);
-    };
-  }, []);
+  }, [timeLeft, currentResponse?.status, index, saving]);
 
   const progress = Math.round((index / total) * 100);
 
@@ -140,8 +182,11 @@ export function GameClient({
     // setelah terkunci: hijau utk benar, merah utk pilihan salah
     if (locked) {
       const opt = current.options.find((o) => o.id === optId);
-      if (opt?.is_correct) return "bg-tertiary-fixed-dim";
-      if (optId === selectedId) return "bg-error-container";
+      if (revealAnswer) {
+        if (opt?.is_correct) return "bg-tertiary-fixed-dim";
+        if (optId === selectedId) return "bg-error-container";
+        return "bg-white opacity-60";
+      }
       return "bg-white opacity-60";
     }
     return `bg-white ${HOVER_BG[position] ?? ""}`;
@@ -152,12 +197,13 @@ export function GameClient({
       {/* Header */}
       <header className="w-full flex justify-between items-center px-margin md:px-gutter py-4 sticky top-0 z-50 bg-background border-b-4 border-on-background">
         <div className="flex items-center gap-4">
-          <Link
-            href="/library"
+          <button
+            type="button"
+            onClick={goPrevOrExit}
             className="bg-surface-container-high border-2 border-on-background p-2 neo-shadow-sm active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
           >
-            <MaterialIcon name="close" className="block" />
-          </Link>
+            <MaterialIcon name={index > 0 ? "arrow_back" : "close"} className="block" />
+          </button>
           <div className="hidden md:block">
             <p className="font-label-bold text-label-bold uppercase tracking-wider text-outline">
               {categoryName}
@@ -261,12 +307,30 @@ export function GameClient({
       <footer className="w-full p-margin md:p-gutter flex flex-col md:flex-row justify-between items-center gap-4 mt-auto">
         <div className="flex gap-4">
           <button
-            disabled={locked}
-            onClick={() => answer(null)}
+            type="button"
+            onClick={goPrevOrExit}
+            className="flex items-center gap-2 bg-surface-container border-2 border-on-background px-4 py-2 font-label-bold text-label-bold neo-shadow-sm btn-interact"
+          >
+            <MaterialIcon name={index > 0 ? "arrow_back" : "logout"} />
+            {index > 0 ? "Kembali" : "Keluar"}
+          </button>
+          <button
+            type="button"
+            disabled={locked || saving}
+            onClick={skip}
             className="flex items-center gap-2 bg-surface-container border-2 border-on-background px-4 py-2 font-label-bold text-label-bold neo-shadow-sm btn-interact disabled:opacity-50"
           >
             <MaterialIcon name="skip_next" />
             Lewati
+          </button>
+          <button
+            type="button"
+            disabled={!canGoNext}
+            onClick={goNext}
+            className="flex items-center gap-2 bg-on-background text-surface border-2 border-on-background px-4 py-2 font-label-bold text-label-bold neo-shadow-sm btn-interact disabled:opacity-50"
+          >
+            <MaterialIcon name="arrow_forward" />
+            {index + 1 < total ? "Selanjutnya" : saving ? "Menyimpan…" : "Submit"}
           </button>
         </div>
         <div className="hidden md:flex items-center gap-6">
@@ -283,12 +347,6 @@ export function GameClient({
             </span>
           </div>
         </div>
-        <Link
-          href="/library"
-          className="bg-on-background text-surface border-2 border-on-background px-8 py-3 font-headline-md text-headline-md neo-shadow-sm btn-interact"
-        >
-          {saving ? "MENYIMPAN…" : "KELUAR"}
-        </Link>
       </footer>
     </div>
   );
