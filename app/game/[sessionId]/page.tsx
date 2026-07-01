@@ -50,6 +50,9 @@ export default async function GameSessionPage({
   if (session.status === "active") {
     if (gamePlayerId) {
       redirect(`/game/${sessionId}/play?gamePlayerId=${gamePlayerId}`);
+    } else if (user && session.owner_id === user.id) {
+      // Host langsung ke play (tanpa gamePlayerId)
+      redirect(`/game/${sessionId}/play`);
     } else {
       redirect(`/game/${sessionId}/join`);
     }

@@ -20,14 +20,15 @@ type Session = {
 
 type Player = {
   id: string;
-  user_id: string;
+  user_id: string | null;
+  guest_username?: string | null;
   score: number;
   correct_count: number;
   finished_at: string | null;
-  profiles: {
+  profiles?: {
     username: string;
     avatar_url: string | null;
-  };
+  } | null;
 };
 
 interface HostLiveClientProps {
@@ -190,7 +191,9 @@ export function HostLiveClient({
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-body-lg text-body-lg font-bold truncate">
-                      {player.profiles.username}
+                      {player.user_id
+                        ? player.profiles?.username || "Unknown"
+                        : player.guest_username || "Guest"}
                     </p>
                     <p className="font-label-bold text-label-bold text-outline">
                       {player.correct_count} benar
