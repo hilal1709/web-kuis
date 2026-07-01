@@ -8,6 +8,7 @@ import { Footer } from "@/app/components/Footer";
 import { BottomNav } from "@/app/components/BottomNav";
 import { MaterialIcon } from "@/app/components/MaterialIcon";
 import { QuestionBuilder } from "@/app/components/QuestionBuilder";
+import { SubmitButton } from "@/app/components/SubmitButton";
 import type { Question } from "@/lib/types";
 
 const LETTERS = ["A", "B", "C", "D"];
@@ -88,12 +89,12 @@ export default async function EditQuizPage({
                 Publikasikan kuis (semua orang bisa melihat)
               </label>
             </div>
-            <button
-              type="submit"
-              className="px-6 py-3 bg-primary text-on-primary border-4 border-on-background shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-label-bold uppercase"
+            <SubmitButton
+              className="px-6 py-3 bg-primary text-on-primary border-4 border-on-background shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all font-label-bold uppercase flex items-center justify-center gap-2"
+              pendingText="Menyimpan…"
             >
               Simpan Pengaturan
-            </button>
+            </SubmitButton>
           </form>
         </div>
 
@@ -153,13 +154,13 @@ export default async function EditQuizPage({
           <form action={addQuestions} className="space-y-6">
             <input type="hidden" name="quiz_id" value={quizId} />
             <QuestionBuilder />
-            <button
-              type="submit"
+            <SubmitButton
               className="w-full neo-button-primary py-4 font-headline-md flex items-center justify-center gap-2"
+              pendingText="MENYIMPAN…"
             >
               SIMPAN PERTANYAAN BARU
               <MaterialIcon name="add" />
-            </button>
+            </SubmitButton>
           </form>
         </div>
 

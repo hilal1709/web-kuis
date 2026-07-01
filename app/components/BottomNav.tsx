@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { MaterialIcon } from "./MaterialIcon";
 import { signOut } from "@/app/auth/actions";
+import { SubmitButton } from "./SubmitButton";
 
 type Active = "home" | "explore" | "library";
 
@@ -35,15 +36,17 @@ export function BottomNav({ active = "home" }: { active?: Active }) {
         );
       })}
       <form action={signOut}>
-        <button
-          type="submit"
+        <SubmitButton
           className="flex flex-col items-center justify-center text-on-surface-variant hover:text-error transition-colors"
+          pendingText={
+            <span className="font-label-bold text-[10px] uppercase">Keluar…</span>
+          }
         >
           <MaterialIcon name="logout" />
           <span className="font-label-bold text-[10px] uppercase">
             Keluar
           </span>
-        </button>
+        </SubmitButton>
       </form>
     </nav>
   );

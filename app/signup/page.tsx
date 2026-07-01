@@ -2,6 +2,7 @@ import Link from "next/link";
 import { signup } from "@/app/auth/actions";
 import { BrandLogo } from "@/app/components/BrandLogo";
 import { MaterialIcon } from "@/app/components/MaterialIcon";
+import { SubmitButton } from "@/app/components/SubmitButton";
 
 export default async function SignupPage({
   searchParams,
@@ -64,13 +65,13 @@ export default async function SignupPage({
               required
             />
           </div>
-          <button
+          <SubmitButton
             className="w-full neo-button-primary py-4 font-headline-md flex items-center justify-center gap-2"
-            type="submit"
+            pendingText="MENDAFTAR…"
           >
             DAFTAR GRATIS
             <MaterialIcon name="rocket_launch" />
-          </button>
+          </SubmitButton>
         </form>
 
         <p className="mt-6 text-center text-on-surface-variant font-label-bold">

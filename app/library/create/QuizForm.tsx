@@ -4,6 +4,7 @@ import { useState } from "react";
 import { MaterialIcon } from "@/app/components/MaterialIcon";
 import { QuestionBuilder } from "@/app/components/QuestionBuilder";
 import { ImageUpload } from "@/app/components/ImageUpload";
+import { SubmitButton } from "@/app/components/SubmitButton";
 import { createQuiz } from "@/app/library/actions";
 
 interface QuizFormProps {
@@ -77,13 +78,13 @@ export function QuizForm({ error }: QuizFormProps) {
         <QuestionBuilder />
       </section>
 
-      <button
-        type="submit"
+      <SubmitButton
         className="w-full neo-button-primary py-4 font-headline-md flex items-center justify-center gap-2"
+        pendingText="MENYIMPAN…"
       >
         SIMPAN SEMUA PERTANYAAN
         <MaterialIcon name="save" />
-      </button>
+      </SubmitButton>
     </form>
   );
 }

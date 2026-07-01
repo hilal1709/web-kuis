@@ -1,8 +1,10 @@
+import Image from "next/image";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/supabase/user";
 import { signOut } from "@/app/auth/actions";
-import { BrandLogo } from "./BrandLogo";
+import logoRaw from "@/public/logo.PNG";
 import { MaterialIcon } from "./MaterialIcon";
+import { SubmitButton } from "./SubmitButton";
 
 type ActiveLink = "home" | "explore" | "library";
 
@@ -18,7 +20,20 @@ export async function TopNav({ active }: { active?: ActiveLink }) {
   return (
     <nav className="flex justify-between items-center w-full px-margin md:px-gutter py-4 sticky top-0 z-50 bg-background border-b-4 border-on-background shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
       <div className="flex items-center gap-8">
-        <BrandLogo href="/" width={132} className="shrink-0" priority />
+        <Link
+          href="/"
+          aria-label="XSATU"
+          className="relative block h-12 w-[172px] shrink-0 overflow-hidden"
+        >
+          <Image
+            src={logoRaw}
+            alt="XSATU"
+            fill
+            priority
+            sizes="172px"
+            className="object-cover object-center"
+          />
+        </Link>
         <div className="hidden md:flex gap-6 items-center">
           {links.map((l) => (
             <Link
@@ -54,13 +69,13 @@ export async function TopNav({ active }: { active?: ActiveLink }) {
               )}
             </div>
             <form action={signOut}>
-              <button
+              <SubmitButton
                 className="hidden sm:flex items-center gap-1 bg-surface-container border-2 border-on-background px-3 py-2 font-label-bold text-label-bold neo-shadow-sm btn-interact uppercase"
-                type="submit"
+                pendingText="KELUAR…"
               >
                 <MaterialIcon name="logout" className="text-[18px]" />
                 Keluar
-              </button>
+              </SubmitButton>
             </form>
           </div>
         ) : (

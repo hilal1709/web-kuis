@@ -46,14 +46,16 @@ export function QuizBackgroundMusic({
       <button
         type="button"
         onClick={() => setEnabled((value) => !value)}
-        className="fixed bottom-4 right-4 z-40 flex items-center gap-2 border-2 border-on-background bg-secondary-container px-4 py-2 font-label-bold text-label-bold neo-shadow-sm btn-interact"
+        className="fixed right-4 top-24 z-40 flex items-center gap-2 border-2 border-on-background bg-secondary-container px-3 py-2 font-label-bold text-label-bold neo-shadow-sm btn-interact md:top-auto md:bottom-4 md:px-4"
         aria-pressed={enabled}
+        aria-label={enabled ? "Matikan musik" : "Nyalakan musik"}
+        title={enabled ? "Matikan musik" : "Nyalakan musik"}
       >
         <MaterialIcon
           name={enabled ? "pause_circle" : "play_circle"}
           className="text-[20px]"
         />
-        {enabled ? "Musik On" : "Musik Off"}
+        <span className="hidden sm:inline">{enabled ? "Musik On" : "Musik Off"}</span>
       </button>
     </>
   );

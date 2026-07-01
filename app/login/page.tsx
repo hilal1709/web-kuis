@@ -2,6 +2,7 @@ import Link from "next/link";
 import { login, resendConfirmation } from "@/app/auth/actions";
 import { BrandLogo } from "@/app/components/BrandLogo";
 import { MaterialIcon } from "@/app/components/MaterialIcon";
+import { SubmitButton } from "@/app/components/SubmitButton";
 
 export default async function LoginPage({
   searchParams,
@@ -66,13 +67,13 @@ export default async function LoginPage({
               required
             />
           </div>
-          <button
+          <SubmitButton
             className="w-full neo-button-primary py-4 font-headline-md flex items-center justify-center gap-2"
-            type="submit"
+            pendingText="MASUK…"
           >
             MASUK
             <MaterialIcon name="login" />
-          </button>
+          </SubmitButton>
         </form>
 
         {showResend && (
@@ -81,13 +82,13 @@ export default async function LoginPage({
               Belum terima email konfirmasi?
             </p>
             <input type="hidden" name="email" value={email ?? ""} />
-            <button
-              type="submit"
+            <SubmitButton
               className="w-full neo-button-secondary py-3 font-label-bold flex items-center justify-center gap-2"
+              pendingText="MENGIRIM…"
             >
               <MaterialIcon name="mail" />
               KIRIM ULANG EMAIL KONFIRMASI
-            </button>
+            </SubmitButton>
           </form>
         )}
 

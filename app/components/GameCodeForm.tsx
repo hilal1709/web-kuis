@@ -3,6 +3,7 @@
 import { useRef } from "react";
 import Link from "next/link";
 import { joinByGameCode } from "@/app/join/actions";
+import { SubmitButton } from "./SubmitButton";
 
 export function GameCodeForm({ error }: { error?: string }) {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -47,13 +48,13 @@ export function GameCodeForm({ error }: { error?: string }) {
             onBlur={handleBlur}
           />
         </div>
-        <button
+        <SubmitButton
           className="w-full neo-button-primary py-5 font-headline-md flex items-center justify-center gap-3"
-          type="submit"
+          pendingText="MENGGABUNGKAN…"
         >
           GABUNG SEKARANG
           <span className="material-symbols-outlined">rocket_launch</span>
-        </button>
+        </SubmitButton>
       </form>
       <div className="mt-4 text-on-surface-variant font-label-bold">
         ATAU{" "}

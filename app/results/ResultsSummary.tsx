@@ -67,13 +67,15 @@ export function ResultsSummary({
               Hasil Kuis
             </h1>
             {subtitle ? (
-              <p className="font-body-lg text-body-lg text-outline">{subtitle}</p>
+              <p className="font-body-lg text-body-lg text-on-primary-container font-bold">
+                {subtitle}
+              </p>
             ) : null}
           </section>
 
           <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-tertiary-container border-4 border-on-background neo-shadow-md p-6 text-center">
-              <p className="font-label-bold text-label-bold uppercase text-outline mb-2">
+              <p className="font-label-bold text-label-bold uppercase text-on-tertiary-container mb-2">
                 Skor
               </p>
               <p className="font-headline-xl text-headline-xl">
@@ -82,7 +84,7 @@ export function ResultsSummary({
             </div>
 
             <div className="bg-secondary-container border-4 border-on-background neo-shadow-md p-6 text-center">
-              <p className="font-label-bold text-label-bold uppercase text-outline mb-2">
+              <p className="font-label-bold text-label-bold uppercase text-on-secondary-container mb-2">
                 Akurasi
               </p>
               <p className="font-headline-xl text-headline-xl">{accuracy}%</p>
