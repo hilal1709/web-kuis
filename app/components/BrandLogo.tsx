@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import brandLogo from "@/public/logo-cropped.png";
 
 type BrandLogoProps = {
   href?: string;
@@ -14,12 +15,12 @@ export function BrandLogo({
   className = "",
   priority = false,
 }: BrandLogoProps) {
-  const height = Math.round((width * 120) / 360);
+  const height = Math.round((width * brandLogo.height) / brandLogo.width);
 
   return (
     <Link href={href} aria-label="XSATU" className={className}>
       <Image
-        src="/xsatu-logo.svg"
+        src={brandLogo}
         alt="XSATU"
         width={width}
         height={height}

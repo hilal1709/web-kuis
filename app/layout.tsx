@@ -25,9 +25,9 @@ export const metadata: Metadata = {
   description:
     "Platform assessment interaktif untuk perusahaan. Buat kuis, evaluasi karyawan, dan pantau performa tim.",
   icons: {
-    icon: "/xsatu-icon.svg",
-    shortcut: "/xsatu-icon.svg",
-    apple: "/xsatu-icon.svg",
+    icon: "/logo-icon.png",
+    shortcut: "/logo-icon.png",
+    apple: "/logo-icon.png",
   },
 };
 
