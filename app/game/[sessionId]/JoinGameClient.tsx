@@ -39,7 +39,11 @@ export function JoinGameClient({
       guestUsername: userId ? undefined : guestUsername,
     });
     if (res.ok) {
-      router.push(`/game/${sessionId}`);
+      // Jika guest, simpan gamePlayerId di localStorage dan redirect dengan query parameter
+      if (!userId) {
+        localStorage.setItem(`gamePlayerId:${sessionId}`, res.gamePlayerId);
+      }
+      router.push(`/game/${sessionId}?gamePlayerId=${res.gamePlayerId}`);
     } else {
       alert(res.error);
       setJoining(false);

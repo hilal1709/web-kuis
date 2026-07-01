@@ -6,19 +6,18 @@ import { HostLiveClient } from "../HostLiveClient";
 
 export default async function LiveGamePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ sessionId: string }>;
+  searchParams?: Promise<{ gamePlayerId?: string }>;
 }) {
   const { sessionId } = await params;
+  const { gamePlayerId } = (await searchParams) || {};
   const supabase = await createClient();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
 
   const gameData = await getGameSession(sessionId);
 
@@ -30,15 +29,24 @@ export default async function LiveGamePage({
 
   // Sesi harus sedang berjalan
   if (session.status !== "active") {
-    redirect(`/game/${sessionId}`);
+    if (gamePlayerId) {
+      redirect(`/game/${sessionId}?gamePlayerId=${gamePlayerId}`);
+    } else {
+      redirect(`/game/${sessionId}`);
+    }
   }
 
-  // Cari pemain saat ini
-  const currentPlayer = players.find((p) => p.user_id === user.id);
+  // Cari pemain saat ini:
+  let currentPlayer: any;
+  if (user) {
+    currentPlayer = players.find((p) => p.user_id === user.id);
+  } else if (gamePlayerId) {
+    currentPlayer = players.find((p) => p.id === gamePlayerId);
+  }
 
   // Owner yang tidak ikut bermain → tampilkan layar host (spectator + ranking realtime)
   if (!currentPlayer) {
-    if (session.owner_id === user.id) {
+    if (user && session.owner_id === user.id) {
       return (
         <HostLiveClient
           sessionId={sessionId}
@@ -68,7 +76,7 @@ export default async function LiveGamePage({
       players={players}
       questions={questions}
       currentPlayer={currentPlayer}
-      currentUserId={user.id}
+      currentUserId={user ? user.id : null}
     />
   );
 }

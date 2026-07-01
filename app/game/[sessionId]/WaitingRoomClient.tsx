@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { MaterialIcon } from "@/app/components/MaterialIcon";
 import { createClient } from "@/lib/supabase/client";
 import { startGameSession } from "../actions";
@@ -46,13 +46,30 @@ export function WaitingRoomClient({
   players: initialPlayers,
   isOwner,
   currentUserId,
-  currentPlayerId,
+  currentPlayerId: initialCurrentPlayerId,
 }: WaitingRoomClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [players, setPlayers] = useState<Player[]>(initialPlayers);
   const [sessionStatus, setSessionStatus] = useState(session.status);
   const [starting, setStarting] = useState(false);
   const supabase = createClient();
+
+  // Dapatkan currentPlayerId dari search params atau localStorage
+  const [currentPlayerId, setCurrentPlayerId] = useState<string | undefined>(initialCurrentPlayerId);
+
+  useEffect(() => {
+    const gamePlayerIdFromQuery = searchParams?.get("gamePlayerId");
+    if (gamePlayerIdFromQuery) {
+      setCurrentPlayerId(gamePlayerIdFromQuery);
+      localStorage.setItem(`gamePlayerId:${sessionId}`, gamePlayerIdFromQuery);
+    } else {
+      const storedGamePlayerId = localStorage.getItem(`gamePlayerId:${sessionId}`);
+      if (storedGamePlayerId) {
+        setCurrentPlayerId(storedGamePlayerId);
+      }
+    }
+  }, [searchParams, sessionId]);
 
   // Function to fetch all players with profiles
   const fetchPlayers = async () => {
@@ -100,7 +117,11 @@ export function WaitingRoomClient({
           const newStatus = payload.new.status;
           setSessionStatus(newStatus);
           if (newStatus === "active") {
-            router.push(`/game/${sessionId}/play`);
+            if (currentPlayerId) {
+              router.push(`/game/${sessionId}/play?gamePlayerId=${currentPlayerId}`);
+            } else {
+              router.push(`/game/${sessionId}/play`);
+            }
           }
         }
       )
@@ -116,7 +137,11 @@ export function WaitingRoomClient({
     setStarting(true);
     const res = await startGameSession({ gameSessionId: sessionId });
     if (res.ok) {
-      router.push(`/game/${sessionId}/play`);
+      if (currentPlayerId) {
+        router.push(`/game/${sessionId}/play?gamePlayerId=${currentPlayerId}`);
+      } else {
+        router.push(`/game/${sessionId}/play`);
+      }
     } else {
       alert(res.error);
       setStarting(false);

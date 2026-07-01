@@ -8,6 +8,9 @@ ALTER TABLE public.game_players ALTER COLUMN user_id DROP NOT NULL;
 -- Tambahkan kolom guest_username
 ALTER TABLE public.game_players ADD COLUMN IF NOT EXISTS guest_username TEXT;
 
+-- Hapus constraint lama jika ada
+ALTER TABLE public.game_players DROP CONSTRAINT IF EXISTS game_players_has_identity;
+
 -- Tambahkan constraint: harus ada user_id atau guest_username (tidak boleh keduanya kosong)
 ALTER TABLE public.game_players ADD CONSTRAINT game_players_has_identity CHECK (
   (user_id IS NOT NULL) OR (guest_username IS NOT NULL)

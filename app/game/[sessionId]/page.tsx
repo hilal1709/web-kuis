@@ -5,10 +5,13 @@ import { WaitingRoomClient } from "./WaitingRoomClient";
 
 export default async function GameSessionPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ sessionId: string }>;
+  searchParams?: Promise<{ gamePlayerId?: string }>;
 }) {
   const { sessionId } = await params;
+  const { gamePlayerId } = (await searchParams) || {};
   const supabase = await createClient();
 
   const {
@@ -45,22 +48,26 @@ export default async function GameSessionPage({
 
   // Jika sesi sedang berjalan, redirect ke halaman play
   if (session.status === "active") {
-    redirect(`/game/${sessionId}/play`);
+    if (gamePlayerId) {
+      redirect(`/game/${sessionId}/play?gamePlayerId=${gamePlayerId}`);
+    } else {
+      redirect(`/game/${sessionId}/join`);
+    }
   }
 
   // Cek apakah user adalah owner (hanya jika user login)
   const isOwner = user ? session.owner_id === user.id : false;
 
-  // Cek apakah user sudah join (hanya jika user login)
-  const player = user ? players.find((p) => p.user_id === user.id) : undefined;
-
-  // Jika user tidak login, redirect ke join
-  if (!user && !player) {
-    redirect(`/game/${sessionId}/join`);
+  // Cari player:
+  let player: any;
+  if (user) {
+    player = players.find((p) => p.user_id === user.id);
+  } else if (gamePlayerId) {
+    player = players.find((p) => p.id === gamePlayerId);
   }
 
-  // Jika user login tapi belum join dan bukan owner, redirect ke join
-  if (user && !player && !isOwner) {
+  // Jika tidak ada player dan bukan owner, redirect ke join
+  if (!player && !isOwner) {
     redirect(`/game/${sessionId}/join`);
   }
 
